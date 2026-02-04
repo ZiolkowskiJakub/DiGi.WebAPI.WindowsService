@@ -1,89 +1,93 @@
-
 using System.Reflection;
+using System.Runtime.Loader;
 
 namespace DiGi.WebAPI.WindowsService
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder(args);
-
             IServiceCollection serviceCollection = webApplicationBuilder.Services;
 
+            bool isDevelopment = webApplicationBuilder.Environment.IsDevelopment();
+
+            // Route configuration
             serviceCollection.Configure<RouteOptions>(options =>
             {
                 options.LowercaseUrls = true;
                 options.LowercaseQueryStrings = true;
             });
 
-            bool isDevelopment = webApplicationBuilder.Environment.IsDevelopment();
-
-            // Add services to the container.
-
             if (isDevelopment)
             {
-                // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
                 serviceCollection.AddEndpointsApiExplorer();
                 serviceCollection.AddSwaggerGen();
             }
 
-            serviceCollection.AddControllers();
+            // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
+            Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
 
             string? directory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             if (!string.IsNullOrWhiteSpace(directory))
             {
-                string[] paths = Directory.GetFiles(directory!, "*.dll");
+                List<string> paths = [.. Directory.GetFiles(directory, "*.dll").Where(path => !Query.ExcludedLibrary(path))];
 
-                foreach (string path in paths)
+                // We create a list of resolvers for all potential plugin locations
+                IEnumerable<AssemblyDependencyResolver> assemblyDependencyResolvers = paths.Select(path => new AssemblyDependencyResolver(path));
+
+                // Global handler - registered ONCE - that uses all available resolvers
+                AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
                 {
-                    Assembly? assembly = null;
-
-                    try
+                    // 1. Check if already loaded in our cache
+                    if (dictionary_LoadedAssembly.TryGetValue(assemblyName.FullName, out var existing))
                     {
-                        assembly = Assembly.LoadFrom(path);
-                        if (assembly is not null)
+                        return existing;
+                    }
+
+                    // 2. Check if already in the runtime
+                    Assembly? assembly_AlreadyInRuntime = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName.Name);
+                    if (assembly_AlreadyInRuntime != null)
+                    {
+                        return assembly_AlreadyInRuntime;
+                    }
+
+                    // 3. Try to resolve using any of the available resolvers (from our DLLs)
+                    foreach (AssemblyDependencyResolver assemblyDependencyResolver in assemblyDependencyResolvers)
+                    {
+                        string? assemblyPath = assemblyDependencyResolver.ResolveAssemblyToPath(assemblyName);
+                        if (assemblyPath != null)
                         {
-                            bool contains = false;
-
-                            Type[] types = assembly.GetTypes();
-                            if (types != null)
-                            {
-                                foreach (Type type in types)
-                                {
-                                    if (type.IsSubclassOf(typeof(Classes.WebAPIController)))
-                                    {
-                                        // This assembly contains at least one controller
-                                        contains = true;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            if(!contains)
-                            {
-                                assembly = null;
-                            }
+                            Assembly assembly = context.LoadFromAssemblyPath(assemblyPath);
+                            dictionary_LoadedAssembly[assemblyName.FullName] = assembly;
+                            return assembly;
                         }
                     }
-                    catch (BadImageFormatException)
-                    {
-                        // Not a .NET assembly
-                    }
-                    catch (FileLoadException)
-                    {
-                        // Already loaded or dependency issue
-                    }
+                    return null;
+                };
 
-                    if (assembly == null)
+                // Now actually load the assemblies to find controllers
+                foreach (string path in paths)
+                {
+                    try
                     {
-                        continue;
-                    }
+                        // Use the default context to load the assembly
+                        Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                        if(assembly is null)
+                        {
+                            continue;
+                        }
 
-                    serviceCollection.AddControllers().AddApplicationPart(assembly);
+                        await Modify.InitializeAsync(assembly, serviceCollection);
+                    }
+                    catch //(Exception ex)
+                    {
+                        //Console.WriteLine($"[Error] Could not load {Path.GetFileName(path)}: {ex.Message}");
+                    }
                 }
             }
 
+            // --- END: Optimized Dynamic Loading Logic ---
 
             WebApplication webApplication = webApplicationBuilder.Build();
 
@@ -95,10 +99,7 @@ namespace DiGi.WebAPI.WindowsService
             }
 
             webApplication.UseAuthorization();
-
-
             webApplication.MapControllers();
-
             webApplication.Run();
         }
     }
