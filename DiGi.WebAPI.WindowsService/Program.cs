@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.Collections.Generic;
@@ -69,21 +71,43 @@ namespace DiGi.WebAPI.WindowsService
 
         public static async Task Run(string[] args)
         {
-            WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder(args);
-            webApplicationBuilder.Host.UseWindowsService(options =>
+            string path_Main = Process.GetCurrentProcess().MainModule!.FileName;
+            string directory_Main = Path.GetDirectoryName(path_Main)!;
+
+            Directory.SetCurrentDirectory(directory_Main);
+
+            WebApplicationOptions webOptions = new WebApplicationOptions
             {
-                options.ServiceName = Constants.Name.Service;
+                Args = args,
+                ContentRootPath = directory_Main 
+            };
+
+            WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder(webOptions);
+            webApplicationBuilder.Host.UseWindowsService(windowsServiceLifetimeOptions =>
+            {
+                windowsServiceLifetimeOptions.ServiceName = Constants.Name.Service;
             });
 
             IServiceCollection serviceCollection = webApplicationBuilder.Services;
+            serviceCollection.AddAuthentication();
 
             bool isDevelopment = webApplicationBuilder.Environment.IsDevelopment();
 
             // Route configuration
-            serviceCollection.Configure<RouteOptions>(options =>
+            serviceCollection.Configure<RouteOptions>(routeOptions =>
             {
-                options.LowercaseUrls = true;
-                options.LowercaseQueryStrings = true;
+                routeOptions.LowercaseUrls = true;
+                routeOptions.LowercaseQueryStrings = true;
+            });
+
+            serviceCollection.Configure<KestrelServerOptions>(kestrelServerOptions =>
+            {
+                kestrelServerOptions.Limits.MaxRequestBodySize = 200 * 1024 * 1024; // 200 MB
+            });
+
+            serviceCollection.Configure<FormOptions>(formOptions =>
+            {
+                formOptions.MultipartBodyLengthLimit = 200 * 1024 * 1024; // 200 MB
             });
 
             //if (isDevelopment)
@@ -91,6 +115,8 @@ namespace DiGi.WebAPI.WindowsService
                 serviceCollection.AddEndpointsApiExplorer();
                 serviceCollection.AddSwaggerGen();
             }
+
+            serviceCollection.AddControllers();
 
             // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
             Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
