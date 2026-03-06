@@ -16,28 +16,11 @@ namespace DiGi.WebAPI.WindowsService
 {
     public class Program
     {
-        public static async Task Main(string[] args)
-        {
-            if (args.Contains("--install"))
-            {
-                await Install();
-                return;
-            }
-
-            if (args.Contains("--uninstall"))
-            {
-                await Uninstall();
-                return;
-            }
-
-            await Run(args);
-        }
-
         public static async Task Install()
         {
             // Get the path of the current executable
             string? path = Process.GetCurrentProcess()?.MainModule?.FileName;
-            if(string.IsNullOrWhiteSpace(path))
+            if (string.IsNullOrWhiteSpace(path))
             {
                 return;
             }
@@ -58,7 +41,7 @@ namespace DiGi.WebAPI.WindowsService
 
         private static async Task Uninstall()
         {
-            ProcessStartInfo processInfo = new ProcessStartInfo
+            ProcessStartInfo processInfo = new()
             {
                 FileName = "sc.exe",
                 Arguments = $"delete {Constants.Name.Service}",
@@ -71,15 +54,20 @@ namespace DiGi.WebAPI.WindowsService
 
         public static async Task Run(string[] args)
         {
-            string path_Main = Process.GetCurrentProcess().MainModule!.FileName;
-            string directory_Main = Path.GetDirectoryName(path_Main)!;
+            string? path_Process = System.Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(path_Process))
+            {
+                return;
+            }
+
+            string directory_Main = Path.GetDirectoryName(path_Process)!;
 
             Directory.SetCurrentDirectory(directory_Main);
 
-            WebApplicationOptions webOptions = new WebApplicationOptions
+            WebApplicationOptions webOptions = new()
             {
                 Args = args,
-                ContentRootPath = directory_Main 
+                ContentRootPath = directory_Main
             };
 
             WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder(webOptions);
@@ -125,7 +113,7 @@ namespace DiGi.WebAPI.WindowsService
             if (!string.IsNullOrWhiteSpace(directory_Assembly))
             {
                 string directory_Extensions = Path.Combine(directory_Assembly, "extensions");
-                if(Directory.Exists(directory_Extensions))
+                if (Directory.Exists(directory_Extensions))
                 {
                     string[] directories = Directory.GetDirectories(directory_Extensions);
                     foreach (string directory in directories)
@@ -202,6 +190,23 @@ namespace DiGi.WebAPI.WindowsService
             webApplication.UseAuthorization();
             webApplication.MapControllers();
             webApplication.Run();
+        }
+
+        public static async Task Main(string[] args)
+        {
+            if (args.Contains("--install"))
+            {
+                await Install();
+                return;
+            }
+
+            if (args.Contains("--uninstall"))
+            {
+                await Uninstall();
+                return;
+            }
+
+            await Run(args);
         }
     }
 }

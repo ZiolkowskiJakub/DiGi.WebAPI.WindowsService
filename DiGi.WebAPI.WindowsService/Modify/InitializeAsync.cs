@@ -11,7 +11,7 @@ namespace DiGi.WebAPI.WindowsService
     {
         public static async Task InitializeAsync(this Assembly? assembly, IServiceCollection? serviceCollection)
         {
-            if(assembly is null || serviceCollection is null)
+            if (assembly is null || serviceCollection is null)
             {
                 return;
             }
@@ -53,7 +53,6 @@ namespace DiGi.WebAPI.WindowsService
                                 await valueTask;
                             }
                         }
-
                     }
                 }
 
