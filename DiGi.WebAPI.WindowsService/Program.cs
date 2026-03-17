@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -54,7 +56,7 @@ namespace DiGi.WebAPI.WindowsService
 
         public static async Task Run(string[] args)
         {
-            string? path_Process = System.Environment.ProcessPath;
+            string? path_Process = Environment.ProcessPath;
             if (string.IsNullOrWhiteSpace(path_Process))
             {
                 return;
@@ -63,6 +65,23 @@ namespace DiGi.WebAPI.WindowsService
             string directory_Main = Path.GetDirectoryName(path_Process)!;
 
             Directory.SetCurrentDirectory(directory_Main);
+
+            string path_Log = Path.Combine(directory_Main, "logs", "log-.txt");
+
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .WriteTo.Console()
+                .WriteTo.File(path_Log,
+                    rollingInterval: RollingInterval.Day, // New file every day
+                    retainedFileCountLimit: 7,            // Keep logs for 7 days
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                .CreateLogger();
+
+            Log.Information("-------Logging started-------");
+
+            Log.Information("Current directory: {Directory}", directory_Main);
+
+            Log.Information("WindowsService initialization started");
 
             WebApplicationOptions webOptions = new()
             {
@@ -75,6 +94,8 @@ namespace DiGi.WebAPI.WindowsService
             {
                 windowsServiceLifetimeOptions.ServiceName = Constants.Name.Service;
             });
+
+            Log.Information("Service name: {ServiceName}", Constants.Name.Service);
 
             IServiceCollection serviceCollection = webApplicationBuilder.Services;
             serviceCollection.AddAuthentication();
@@ -98,13 +119,15 @@ namespace DiGi.WebAPI.WindowsService
                 formOptions.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
             });
 
-            //if (isDevelopment)
+            if (isDevelopment)
             {
                 serviceCollection.AddEndpointsApiExplorer();
                 serviceCollection.AddSwaggerGen();
+
+                Log.Information("Swagger added");
             }
 
-            serviceCollection.AddControllers();
+            IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
 
             // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
             Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
@@ -113,11 +136,18 @@ namespace DiGi.WebAPI.WindowsService
             if (!string.IsNullOrWhiteSpace(directory_Assembly))
             {
                 string directory_Extensions = Path.Combine(directory_Assembly, "extensions");
+
+                Log.Information("Extensions directory: {Directory}", directory_Extensions);
+
                 if (Directory.Exists(directory_Extensions))
                 {
+                    Log.Information("Loading extensions started");
+
                     string[] directories = Directory.GetDirectories(directory_Extensions);
                     foreach (string directory in directories)
                     {
+                        Log.Information("Extension directory: {Directory}", directory);
+
                         List<string> paths = [.. Directory.GetFiles(directory, "*.dll").Where(path => !Query.ExcludedLibrary(path))];
 
                         // We create a list of resolvers for all potential plugin locations
@@ -156,23 +186,36 @@ namespace DiGi.WebAPI.WindowsService
                         // Now actually load the assemblies to find controllers
                         foreach (string path in paths)
                         {
+                            Log.Information("Investigating extension file: {path}", path);
+
                             try
                             {
                                 // Use the default context to load the assembly
                                 Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
                                 if (assembly is null)
                                 {
+                                    Log.Information("Invalid assembly extension file. Extension file skipped");
                                     continue;
                                 }
 
-                                await Modify.InitializeAsync(assembly, serviceCollection);
+                                bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
+                                if(succedded)
+                                {
+                                    Log.Information("Extension file initialized successfully");
+                                }
+                                else
+                                {
+                                    Log.Information("Extension file skipped");
+                                }
                             }
-                            catch //(Exception ex)
+                            catch (Exception exception)
                             {
-                                //Console.WriteLine($"[Error] Could not load {Path.GetFileName(path)}: {ex.Message}");
+                                Log.Error("Extension file loading failed. Exception message: {ExceptionMessage}", exception.Message);
                             }
                         }
                     }
+
+                    Log.Information("Loading extensions ended");
                 }
             }
 
@@ -181,14 +224,19 @@ namespace DiGi.WebAPI.WindowsService
             WebApplication webApplication = webApplicationBuilder.Build();
 
             // Configure the HTTP request pipeline.
-            //if (isDevelopment)
+            if (isDevelopment)
             {
                 webApplication.UseSwagger();
                 webApplication.UseSwaggerUI();
+
+                Log.Information("Swagger and Swagger UI in use");
             }
 
             webApplication.UseAuthorization();
             webApplication.MapControllers();
+
+            Log.Information("WindowsService initialization ended");
+
             webApplication.Run();
         }
 

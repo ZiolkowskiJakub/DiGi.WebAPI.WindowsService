@@ -1,6 +1,9 @@
-//RELEASE
+# DiGi.WebAPI.WindowsService
 
-cd "D:\Nextcloud\Work\DigiProject\Software\DiGi.WebAPI.WindowsService"
+## Operation
+
+cd "C:\ProgramData\DiGi\DiGi.WebAPI.WindowsService"
+
 .\DiGi.WebAPI.WindowsService.exe --install
 Start-Service -Name DiGi.WebAPI.WindowsService
 
@@ -9,13 +12,11 @@ Restart-Service -Name DiGi.WebAPI.WindowsService
 Stop-Service -Name DiGi.WebAPI.WindowsService
 .\DiGi.WebAPI.WindowsService.exe --uninstall
 
-//DEBUG
+## Maintenance
 
-cd "C:\Users\jakub\GitHub\DigiProject\DiGi.WebAPI.WindowsService\bin"
-.\DiGi.WebAPI.WindowsService.exe --install
-Start-Service -Name DiGi.WebAPI.WindowsService
+Get-Service -Name DiGi.WebAPI.WindowsService
+sc delete DiGi.WebAPI.WindowsService
+Remove-Service -Name DiGi.WebAPI.WindowsService 
 
-Restart-Service -Name DiGi.WebAPI.WindowsService 
-
-Stop-Service -Name DiGi.WebAPI.WindowsService
-.\DiGi.WebAPI.WindowsService.exe --uninstall
+## Endpoint check:
+http://localhost:5010/swagger/index.html

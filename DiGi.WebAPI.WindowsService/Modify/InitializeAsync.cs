@@ -1,5 +1,6 @@
 ﻿using DiGi.WebAPI.Classes;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -9,12 +10,16 @@ namespace DiGi.WebAPI.WindowsService
 {
     public static partial class Modify
     {
-        public static async Task InitializeAsync(this Assembly? assembly, IServiceCollection? serviceCollection)
+        public static async Task<bool> InitializeAsync(this Assembly? assembly, IServiceCollection? serviceCollection)
         {
             if (assembly is null || serviceCollection is null)
             {
-                return;
+                return false;
             }
+
+            IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
+
+            bool result = false;
 
             bool containsController = false;
             try
@@ -25,6 +30,7 @@ namespace DiGi.WebAPI.WindowsService
                     if (type.IsSubclassOf(typeof(WebAPIController)))
                     {
                         containsController = true;
+                        Log.Information("WebAPIController found: {Name}", type.Name);
                     }
 
                     // Static initialization pattern
@@ -34,23 +40,42 @@ namespace DiGi.WebAPI.WindowsService
                         methodInfos.Add(type.GetMethod("Initialize", BindingFlags.Public | BindingFlags.Static));
                         methodInfos.Add(type.GetMethod("InitializeAsync", BindingFlags.Public | BindingFlags.Static));
 
-                        foreach (MethodInfo? methodInfo in methodInfos)
+                        methodInfos.RemoveAll(x => x is null);
+
+                        if (methodInfos.Count > 0)
                         {
-                            if (methodInfo == null || methodInfo.GetParameters().Length != 1 || methodInfo.GetParameters()[0].ParameterType != typeof(IServiceCollection))
-                            {
-                                continue;
-                            }
+                            Log.Information("Initialize methods found");
 
-                            var result = methodInfo.Invoke(null, [serviceCollection]);
+                            foreach (MethodInfo? methodInfo in methodInfos)
+                            {
+                                if(methodInfo is null)
+                                {
+                                    continue; ;
+                                }
 
-                            // If the method is async (returns Task or ValueTask), we must await it
-                            if (result is Task task)
-                            {
-                                await task;
-                            }
-                            else if (result is ValueTask valueTask)
-                            {
-                                await valueTask;
+                                if (methodInfo == null || methodInfo.GetParameters().Length != 1 || methodInfo.GetParameters()[0].ParameterType != typeof(IServiceCollection))
+                                {
+                                    Log.Information("Method initialization skipped : {Name}", methodInfo?.Name ?? "???");
+                                    continue;
+                                }
+
+                                Log.Information("Method initialization started : {Name}", methodInfo.Name);
+
+                                var result_Invoke = methodInfo.Invoke(null, [serviceCollection]);
+
+                                // If the method is async (returns Task or ValueTask), we must await it
+                                if (result_Invoke is Task task)
+                                {
+                                    await task;
+                                }
+                                else if (result_Invoke is ValueTask valueTask)
+                                {
+                                    await valueTask;
+                                }
+
+                                Log.Information("Method initialization ended");
+
+                                result = true;
                             }
                         }
                     }
@@ -58,8 +83,11 @@ namespace DiGi.WebAPI.WindowsService
 
                 if (containsController)
                 {
+                    Log.Information("Adding application part: {AssemblyName}", assembly.FullName ?? "???");
                     // Register controllers from this assembly
-                    serviceCollection.AddControllers().AddApplicationPart(assembly);
+                    mvcBuilder.AddApplicationPart(assembly);
+                    
+                    result = true;
                 }
             }
             catch (ReflectionTypeLoadException reflectionTypeLoadException)
@@ -67,9 +95,16 @@ namespace DiGi.WebAPI.WindowsService
                 // Log details about which types failed to load
                 foreach (Exception? loaderException in reflectionTypeLoadException.LoaderExceptions)
                 {
+                    Log.Error("Error when initializing assembly. Exception message: {ExceptionMessage}", loaderException?.Message ?? "???");
                     //Console.WriteLine($"Type load error: {loaderException?.Message}");
                 }
             }
+            catch(Exception exception)
+            {
+                Log.Error("Error when initializing assembly. Exception message: {ExceptionMessage}", exception.Message ?? "???");
+            }
+
+            return result;
         }
     }
 }
