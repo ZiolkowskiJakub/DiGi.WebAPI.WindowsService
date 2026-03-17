@@ -90,12 +90,12 @@ namespace DiGi.WebAPI.WindowsService
 
             serviceCollection.Configure<KestrelServerOptions>(kestrelServerOptions =>
             {
-                kestrelServerOptions.Limits.MaxRequestBodySize = 200 * 1024 * 1024; // 200 MB
+                kestrelServerOptions.Limits.MaxRequestBodySize = 100 * 1024 * 1024; // 100 MB
             });
 
             serviceCollection.Configure<FormOptions>(formOptions =>
             {
-                formOptions.MultipartBodyLengthLimit = 200 * 1024 * 1024; // 200 MB
+                formOptions.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
             });
 
             //if (isDevelopment)
