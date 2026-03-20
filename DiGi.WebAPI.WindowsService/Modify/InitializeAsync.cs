@@ -48,7 +48,7 @@ namespace DiGi.WebAPI.WindowsService
 
                             foreach (MethodInfo? methodInfo in methodInfos)
                             {
-                                if(methodInfo is null)
+                                if (methodInfo is null)
                                 {
                                     continue; ;
                                 }
@@ -86,7 +86,7 @@ namespace DiGi.WebAPI.WindowsService
                     Log.Information("Adding application part: {AssemblyName}", assembly.FullName ?? "???");
                     // Register controllers from this assembly
                     mvcBuilder.AddApplicationPart(assembly);
-                    
+
                     result = true;
                 }
             }
@@ -99,7 +99,7 @@ namespace DiGi.WebAPI.WindowsService
                     //Console.WriteLine($"Type load error: {loaderException?.Message}");
                 }
             }
-            catch(Exception exception)
+            catch (Exception exception)
             {
                 Log.Error("Error when initializing assembly. Exception message: {ExceptionMessage}", exception.Message ?? "???");
             }

@@ -24,3 +24,4 @@ Remove-Service -Name DiGi.WebAPI.WindowsService
 
 ## Endpoint check:
 http://localhost:5010/swagger/index.html
+https://api.digiproject.uk/information/controllers
