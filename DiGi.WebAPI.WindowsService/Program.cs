@@ -87,7 +87,6 @@ namespace DiGi.WebAPI.WindowsService
             Serilog.Modify.Log("Service name: {ServiceName}", Constants.Name.Service);
 
             IServiceCollection serviceCollection = webApplicationBuilder.Services;
-            serviceCollection.AddAuthentication();
 
             bool isDevelopment = webApplicationBuilder.Environment.IsDevelopment();
 
@@ -215,6 +214,8 @@ namespace DiGi.WebAPI.WindowsService
 
             // --- END: Optimized Dynamic Loading Logic ---
 
+            bool useAuthorization = serviceCollection.Any(x => x.ServiceType == typeof(Microsoft.AspNetCore.Authorization.IAuthorizationService));
+
             WebApplication webApplication = webApplicationBuilder.Build();
 
             // Configure the HTTP request pipeline.
@@ -227,7 +228,17 @@ namespace DiGi.WebAPI.WindowsService
             }
 
             webApplication.UseRequestDecompression();
-            webApplication.UseAuthorization();
+
+            if(useAuthorization)
+            {
+                Serilog.Modify.Log("Authorization in use");
+                webApplication.UseAuthorization();
+            }
+            else
+            {
+                Serilog.Modify.Log("Authorization not in use");
+            }
+
             webApplication.MapControllers();
 
             Serilog.Modify.Log("WindowsService initialization ended");

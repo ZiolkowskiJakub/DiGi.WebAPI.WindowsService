@@ -1,6 +1,5 @@
 ﻿using DiGi.WebAPI.Classes;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -30,7 +29,7 @@ namespace DiGi.WebAPI.WindowsService
                     if (type.IsSubclassOf(typeof(WebAPIController)))
                     {
                         containsController = true;
-                        Log.Information("WebAPIController found: {Name}", type.Name);
+                        Serilog.Modify.Log("WebAPIController found: {Name}", type.Name);
                     }
 
                     // Static initialization pattern
@@ -44,7 +43,7 @@ namespace DiGi.WebAPI.WindowsService
 
                         if (methodInfos.Count > 0)
                         {
-                            Log.Information("Initialize methods found");
+                            Serilog.Modify.Log("Initialize methods found");
 
                             foreach (MethodInfo? methodInfo in methodInfos)
                             {
@@ -55,11 +54,11 @@ namespace DiGi.WebAPI.WindowsService
 
                                 if (methodInfo == null || methodInfo.GetParameters().Length != 1 || methodInfo.GetParameters()[0].ParameterType != typeof(IServiceCollection))
                                 {
-                                    Log.Information("Method initialization skipped : {Name}", methodInfo?.Name ?? "???");
+                                    Serilog.Modify.Log("Method initialization skipped : {Name}", methodInfo?.Name ?? "???");
                                     continue;
                                 }
 
-                                Log.Information("Method initialization started : {Name}", methodInfo.Name);
+                                Serilog.Modify.Log("Method initialization started : {Name}", methodInfo.Name);
 
                                 var result_Invoke = methodInfo.Invoke(null, [serviceCollection]);
 
@@ -73,7 +72,7 @@ namespace DiGi.WebAPI.WindowsService
                                     await valueTask;
                                 }
 
-                                Log.Information("Method initialization ended");
+                                Serilog.Modify.Log("Method initialization ended");
 
                                 result = true;
                             }
@@ -83,7 +82,7 @@ namespace DiGi.WebAPI.WindowsService
 
                 if (containsController)
                 {
-                    Log.Information("Adding application part: {AssemblyName}", assembly.FullName ?? "???");
+                    Serilog.Modify.Log("Adding application part: {AssemblyName}", assembly.FullName ?? "???");
                     // Register controllers from this assembly
                     mvcBuilder.AddApplicationPart(assembly);
 
@@ -95,13 +94,13 @@ namespace DiGi.WebAPI.WindowsService
                 // Log details about which types failed to load
                 foreach (Exception? loaderException in reflectionTypeLoadException.LoaderExceptions)
                 {
-                    Log.Error("Error when initializing assembly. Exception message: {ExceptionMessage}", loaderException?.Message ?? "???");
+                    Serilog.Modify.Log(loaderException, "Error when initializing assembly");
                     //Console.WriteLine($"Type load error: {loaderException?.Message}");
                 }
             }
             catch (Exception exception)
             {
-                Log.Error("Error when initializing assembly. Exception message: {ExceptionMessage}", exception.Message ?? "???");
+                Serilog.Modify.Log(exception, "Error when initializing assembly");
             }
 
             return result;
