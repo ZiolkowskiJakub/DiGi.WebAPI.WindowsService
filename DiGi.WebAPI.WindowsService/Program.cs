@@ -120,6 +120,20 @@ namespace DiGi.WebAPI.WindowsService
 
             serviceCollection.AddRequestDecompression();
 
+            string corsPolicyName = "DiGi_Subdomains_Policy";
+
+            serviceCollection.AddCors(options =>
+            {
+                options.AddPolicy(name: corsPolicyName,
+                    policy =>
+                    {
+                        policy.WithOrigins("https://digiproject.uk", "https://*.digiproject.uk")
+                              .SetIsOriginAllowedToAllowWildcardSubdomains()
+                              .AllowAnyHeader()
+                              .AllowAnyMethod();
+                    });
+            });
+
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
 
             // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
@@ -227,9 +241,13 @@ namespace DiGi.WebAPI.WindowsService
                 Serilog.Modify.Log("Swagger and Swagger UI in use");
             }
 
+            webApplication.UseHttpsRedirection();
+
+            webApplication.UseCors(corsPolicyName);
+
             webApplication.UseRequestDecompression();
 
-            if(useAuthorization)
+            if (useAuthorization)
             {
                 Serilog.Modify.Log("Authorization in use");
                 webApplication.UseAuthorization();
