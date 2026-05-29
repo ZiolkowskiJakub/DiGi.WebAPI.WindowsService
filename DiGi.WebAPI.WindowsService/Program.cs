@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -110,14 +111,6 @@ namespace DiGi.WebAPI.WindowsService
                 formOptions.MultipartBodyLengthLimit = 100 * 1024 * 1024; // 100 MB
             });
 
-            if (isDevelopment)
-            {
-                serviceCollection.AddEndpointsApiExplorer();
-                serviceCollection.AddSwaggerGen();
-
-                Serilog.Modify.Log("Swagger added");
-            }
-
             serviceCollection.AddRequestDecompression();
 
             string corsPolicyName = "DiGi_Subdomains_Policy";
@@ -135,6 +128,8 @@ namespace DiGi.WebAPI.WindowsService
             });
 
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
+
+            Serilog.Modify.Log("Extensions initialization started");
 
             // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
             Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
@@ -226,19 +221,57 @@ namespace DiGi.WebAPI.WindowsService
                 }
             }
 
-            // --- END: Optimized Dynamic Loading Logic ---
+            Serilog.Modify.Log("Extensions initialization ended");
+
+            serviceCollection.AddEndpointsApiExplorer();
+            serviceCollection.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "Data Exchange API",
+                    Version = "v1",
+                    Description = "API for exchanging data with DiGi software"
+                });
+
+                foreach (Assembly assembly in AssemblyLoadContext.Default.Assemblies)
+                {
+                    // Avoid dynamic assemblies (like those created by EF or Reflection.Emit)
+                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
+                    {
+                        continue;
+                    }
+
+                    string path_Xml = Path.ChangeExtension(assembly.Location, ".xml");
+
+                    if (File.Exists(path_Xml))
+                    {
+                        try
+                        {
+                            options.IncludeXmlComments(path_Xml);
+                            Serilog.Modify.Log("Swagger: Documentation attached for {AssemblyName}", assembly.GetName().Name ?? "???");
+                        }
+                        catch (Exception exception)
+                        {
+                            Serilog.Modify.Log(exception, "Swagger: Could not load XML for {Path}", path_Xml);
+                        }
+                    }
+                }
+            });
+
+            Serilog.Modify.Log("Swagger added");
 
             bool useAuthorization = serviceCollection.Any(x => x.ServiceType == typeof(Microsoft.AspNetCore.Authorization.IAuthorizationService));
 
             WebApplication webApplication = webApplicationBuilder.Build();
 
+            webApplication.UseSwagger();
+            Serilog.Modify.Log("Swagger in use");
+
             // Configure the HTTP request pipeline.
             if (isDevelopment)
             {
-                webApplication.UseSwagger();
                 webApplication.UseSwaggerUI();
-
-                Serilog.Modify.Log("Swagger and Swagger UI in use");
+                Serilog.Modify.Log("Swagger UI in use");
             }
 
             webApplication.UseHttpsRedirection();
