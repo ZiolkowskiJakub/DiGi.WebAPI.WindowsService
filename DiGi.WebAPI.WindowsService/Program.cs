@@ -127,7 +127,13 @@ namespace DiGi.WebAPI.WindowsService
                     });
             });
 
+            serviceCollection.AddProblemDetails();
+
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
+            mvcBuilder.AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+            });
 
             Serilog.Modify.Log("Extensions initialization started");
 
@@ -200,6 +206,8 @@ namespace DiGi.WebAPI.WindowsService
                                     continue;
                                 }
 
+                                mvcBuilder.AddApplicationPart(assembly);
+
                                 bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
                                 if (succedded)
                                 {
@@ -232,6 +240,8 @@ namespace DiGi.WebAPI.WindowsService
                     Version = "v1",
                     Description = "API for exchanging data with DiGi software"
                 });
+
+                options.UseAllOfForInheritance();
 
                 foreach (Assembly assembly in AssemblyLoadContext.Default.Assemblies)
                 {
