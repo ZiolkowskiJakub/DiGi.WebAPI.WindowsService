@@ -5,9 +5,11 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -140,6 +142,8 @@ namespace DiGi.WebAPI.WindowsService
             // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
             Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
 
+            List<Type> types_SchemaFilter = [];
+
             string? directory_Assembly = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             if (!string.IsNullOrWhiteSpace(directory_Assembly))
             {
@@ -191,6 +195,8 @@ namespace DiGi.WebAPI.WindowsService
                             return null;
                         };
 
+
+
                         // Now actually load the assemblies to find controllers
                         foreach (string path in paths)
                         {
@@ -204,6 +210,12 @@ namespace DiGi.WebAPI.WindowsService
                                 {
                                     Serilog.Modify.Log("Invalid assembly extension file. Extension file skipped");
                                     continue;
+                                }
+
+                                IEnumerable<Type> types_SchemaFilter_Assembly = assembly.GetTypes().Where(type => typeof(ISchemaFilter).IsAssignableFrom(type) && !type.IsInterface &&!type.IsAbstract);
+                                if(types_SchemaFilter_Assembly is not null)
+                                {
+                                    types_SchemaFilter.AddRange(types_SchemaFilter_Assembly);
                                 }
 
                                 mvcBuilder.AddApplicationPart(assembly);
@@ -242,6 +254,15 @@ namespace DiGi.WebAPI.WindowsService
                 });
 
                 options.UseAllOfForInheritance();
+
+                foreach (Type type_SchemaFilter in types_SchemaFilter)
+                {
+                    options.SchemaFilterDescriptors.Add(new FilterDescriptor
+                    {
+                        Type = type_SchemaFilter,
+                        Arguments = []
+                    });
+                }
 
                 foreach (Assembly assembly in AssemblyLoadContext.Default.Assemblies)
                 {
