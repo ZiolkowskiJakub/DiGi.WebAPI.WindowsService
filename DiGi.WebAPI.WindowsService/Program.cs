@@ -1,19 +1,23 @@
+using DiGi.WebAPI.Interfaces;
+using DiGi.WebAPI.WindowsService.Classes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
 namespace DiGi.WebAPI.WindowsService
@@ -22,66 +26,63 @@ namespace DiGi.WebAPI.WindowsService
     {
         public static async Task Install()
         {
-            // Get the path of the current executable
             string? path = Process.GetCurrentProcess()?.MainModule?.FileName;
             if (string.IsNullOrWhiteSpace(path))
             {
                 return;
             }
 
-            // Use sc.exe to create the service
-            // binPath must point to the .exe file
-            ProcessStartInfo processStartInfo = new()
+            ProcessStartInfo processStartInfo = new ()
             {
                 FileName = "sc.exe",
                 Arguments = $"create {Constants.Name.Service} binPath= \"{path}\" start= auto",
                 UseShellExecute = true,
-                Verb = "runas" // Request administrator privileges
-            };
-
-            Process.Start(processStartInfo)?.WaitForExit();
-            //Console.WriteLine("Service installed successfully.");
-        }
-
-        private static async Task Uninstall()
-        {
-            ProcessStartInfo processInfo = new()
-            {
-                FileName = "sc.exe",
-                Arguments = $"delete {Constants.Name.Service}",
-                UseShellExecute = true,
                 Verb = "runas"
             };
 
-            Process.Start(processInfo)?.WaitForExit();
+            Process.Start(processStartInfo)?.WaitForExit();
+        }
+
+        public static async Task Main(string[] args)
+        {
+            if (args.Contains("--install"))
+            {
+                await Install();
+                return;
+            }
+
+            if (args.Contains("--uninstall"))
+            {
+                await Uninstall();
+                return;
+            }
+
+            await Run(args);
         }
 
         public static async Task Run(string[] args)
         {
-            string? path_Process = Environment.ProcessPath;
-            if (string.IsNullOrWhiteSpace(path_Process))
+            string? processPath = Environment.ProcessPath;
+            if (string.IsNullOrWhiteSpace(processPath))
             {
                 return;
             }
 
-            string directory_Main = Path.GetDirectoryName(path_Process)!;
-
-            Directory.SetCurrentDirectory(directory_Main);
-
+            string mainDirectory = Path.GetDirectoryName(processPath)!;
+            Directory.SetCurrentDirectory(mainDirectory);
 
             Serilog.Modify.Log("-------Logging started-------");
-
-            Serilog.Modify.Log("Current directory: {Directory}", directory_Main);
-
+            Serilog.Modify.Log("Current directory: {Directory}", mainDirectory);
             Serilog.Modify.Log("WindowsService initialization started");
 
             WebApplicationOptions webOptions = new()
             {
                 Args = args,
-                ContentRootPath = directory_Main
+                ContentRootPath = mainDirectory
             };
 
             WebApplicationBuilder webApplicationBuilder = WebApplication.CreateBuilder(webOptions);
+
             webApplicationBuilder.Host.UseWindowsService(windowsServiceLifetimeOptions =>
             {
                 windowsServiceLifetimeOptions.ServiceName = Constants.Name.Service;
@@ -89,11 +90,62 @@ namespace DiGi.WebAPI.WindowsService
 
             Serilog.Modify.Log("Service name: {ServiceName}", Constants.Name.Service);
 
-            IServiceCollection serviceCollection = webApplicationBuilder.Services;
+            // Lists to hold filters loaded from extensions
+            List<Type> webAPISchemaFilters = [];
+            List<Type> webAPIDocumentFilters = [];
 
+            // Configure Services (async because of extension loading)
+            await ConfigureServicesAsync(webApplicationBuilder, webAPISchemaFilters, webAPIDocumentFilters);
+
+            WebApplication webApplication = webApplicationBuilder.Build();
+
+            ConfigurePipeline(webApplication);
+
+            Serilog.Modify.Log("WindowsService initialization ended");
+
+            await webApplication.RunAsync();
+        }
+
+        private static void ConfigurePipeline(WebApplication webApplication)
+        {
+            webApplication.UseSwagger();
+            Serilog.Modify.Log("Swagger in use");
+
+            if (webApplication.Environment.IsDevelopment())
+            {
+                webApplication.UseSwaggerUI();
+                Serilog.Modify.Log("Swagger UI in use");
+            }
+
+            webApplication.UseExceptionHandler();
+            webApplication.UseStatusCodePages();
+
+            webApplication.UseHttpsRedirection();
+            webApplication.UseCors(Constants.Name.Policy);
+            webApplication.UseRequestDecompression();
+
+            Microsoft.AspNetCore.Authorization.IAuthorizationService? authService = webApplication.Services.GetService<Microsoft.AspNetCore.Authorization.IAuthorizationService>();
+
+            bool useAuthorization = authService != null;
+
+            if (useAuthorization)
+            {
+                Serilog.Modify.Log("Authorization in use");
+                webApplication.UseAuthorization();
+            }
+            else
+            {
+                Serilog.Modify.Log("Authorization not in use");
+            }
+
+            webApplication.MapControllers();
+        }
+
+        private static async Task ConfigureServicesAsync(WebApplicationBuilder webApplicationBuilder, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters)
+        {
+            IServiceCollection serviceCollection = webApplicationBuilder.Services;
             bool isDevelopment = webApplicationBuilder.Environment.IsDevelopment();
 
-            // Route configuration
             serviceCollection.Configure<RouteOptions>(routeOptions =>
             {
                 routeOptions.LowercaseUrls = true;
@@ -103,7 +155,6 @@ namespace DiGi.WebAPI.WindowsService
             serviceCollection.Configure<KestrelServerOptions>(kestrelServerOptions =>
             {
                 kestrelServerOptions.Limits.MaxRequestBodySize = 100 * 1024 * 1024; // 100 MB
-
                 kestrelServerOptions.Limits.RequestHeadersTimeout = TimeSpan.FromSeconds(30);
                 kestrelServerOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(2);
             });
@@ -115,11 +166,9 @@ namespace DiGi.WebAPI.WindowsService
 
             serviceCollection.AddRequestDecompression();
 
-            string corsPolicyName = "DiGi_Subdomains_Policy";
-
             serviceCollection.AddCors(options =>
             {
-                options.AddPolicy(name: corsPolicyName,
+                options.AddPolicy(name: Constants.Name.Policy,
                     policy =>
                     {
                         policy.WithOrigins("https://digiproject.uk", "https://*.digiproject.uk")
@@ -129,123 +178,48 @@ namespace DiGi.WebAPI.WindowsService
                     });
             });
 
-            serviceCollection.AddProblemDetails();
+            // Enhanced for AI error reading
+            serviceCollection.AddProblemDetails(options =>
+            {
+                options.CustomizeProblemDetails = (context) =>
+                {
+                    context.ProblemDetails.Extensions["serviceVersion"] = Assembly.GetExecutingAssembly().GetName().Version?.ToString();
+                };
+            });
 
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
             mvcBuilder.AddJsonOptions(options =>
             {
-                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                JsonSerializerOptions jsonSerializerOptions = options.JsonSerializerOptions;
+
+                jsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                jsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+                jsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                jsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver
+                {
+                    Modifiers = { ForceCamelCaseModifier }
+                };
             });
 
             Serilog.Modify.Log("Extensions initialization started");
 
-            // Cache for loaded dependencies to ensure we don't reload the same DLL multiple times
-            Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
-
-            List<Type> types_SchemaFilter = [];
-
-            string? directory_Assembly = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            if (!string.IsNullOrWhiteSpace(directory_Assembly))
-            {
-                string directory_Extensions = Path.Combine(directory_Assembly, "extensions");
-
-                Serilog.Modify.Log("Extensions directory: {Directory}", directory_Extensions);
-
-                if (Directory.Exists(directory_Extensions))
-                {
-                    Serilog.Modify.Log("Loading extensions started");
-
-                    string[] directories = Directory.GetDirectories(directory_Extensions);
-                    foreach (string directory in directories)
-                    {
-                        Serilog.Modify.Log("Extension directory: {Directory}", directory);
-
-                        List<string> paths = [.. Directory.GetFiles(directory, "*.dll").Where(path => !Query.ExcludedLibrary(path))];
-
-                        // We create a list of resolvers for all potential plugin locations
-                        IEnumerable<AssemblyDependencyResolver> assemblyDependencyResolvers = paths.Select(path => new AssemblyDependencyResolver(path));
-
-                        // Global handler - registered ONCE - that uses all available resolvers
-                        AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
-                        {
-                            // 1. Check if already loaded in our cache
-                            if (dictionary_LoadedAssembly.TryGetValue(assemblyName.FullName, out var existing))
-                            {
-                                return existing;
-                            }
-
-                            // 2. Check if already in the runtime
-                            Assembly? assembly_AlreadyInRuntime = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName.Name);
-                            if (assembly_AlreadyInRuntime != null)
-                            {
-                                return assembly_AlreadyInRuntime;
-                            }
-
-                            // 3. Try to resolve using any of the available resolvers (from our DLLs)
-                            foreach (AssemblyDependencyResolver assemblyDependencyResolver in assemblyDependencyResolvers)
-                            {
-                                string? assemblyPath = assemblyDependencyResolver.ResolveAssemblyToPath(assemblyName);
-                                if (assemblyPath != null)
-                                {
-                                    Assembly assembly = context.LoadFromAssemblyPath(assemblyPath);
-                                    dictionary_LoadedAssembly[assemblyName.FullName] = assembly;
-                                    return assembly;
-                                }
-                            }
-                            return null;
-                        };
-
-
-
-                        // Now actually load the assemblies to find controllers
-                        foreach (string path in paths)
-                        {
-                            Serilog.Modify.Log("Investigating extension file: {path}", path);
-
-                            try
-                            {
-                                // Use the default context to load the assembly
-                                Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
-                                if (assembly is null)
-                                {
-                                    Serilog.Modify.Log("Invalid assembly extension file. Extension file skipped");
-                                    continue;
-                                }
-
-                                IEnumerable<Type> types_SchemaFilter_Assembly = assembly.GetTypes().Where(type => typeof(ISchemaFilter).IsAssignableFrom(type) && !type.IsInterface &&!type.IsAbstract);
-                                if(types_SchemaFilter_Assembly is not null)
-                                {
-                                    types_SchemaFilter.AddRange(types_SchemaFilter_Assembly);
-                                }
-
-                                mvcBuilder.AddApplicationPart(assembly);
-
-                                bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
-                                if (succedded)
-                                {
-                                    Serilog.Modify.Log("Extension file initialized successfully");
-                                }
-                                else
-                                {
-                                    Serilog.Modify.Log("Extension file skipped");
-                                }
-                            }
-                            catch (Exception exception)
-                            {
-                                Serilog.Modify.Log(exception, "Extension file loading failed");
-                            }
-                        }
-                    }
-
-                    Serilog.Modify.Log("Loading extensions ended");
-                }
-            }
+            await LoadExtensionsAsync(mvcBuilder, serviceCollection, types_SchemaFilters, types_DocumentFilters);
 
             Serilog.Modify.Log("Extensions initialization ended");
 
             serviceCollection.AddEndpointsApiExplorer();
+
+            ConfigureSwagger(serviceCollection, types_SchemaFilters, types_DocumentFilters);
+            Serilog.Modify.Log("Swagger added");
+        }
+
+        private static void ConfigureSwagger(IServiceCollection serviceCollection, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters)
+        {
             serviceCollection.AddSwaggerGen(options =>
             {
+                options.DescribeAllParametersInCamelCase();
+                options.SchemaFilter<CamelCaseSchemaFilter>();
+
                 options.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "Data Exchange API",
@@ -253,20 +227,26 @@ namespace DiGi.WebAPI.WindowsService
                     Description = "API for exchanging data with DiGi software"
                 });
 
-                options.UseAllOfForInheritance();
-
-                foreach (Type type_SchemaFilter in types_SchemaFilter)
+                foreach (Type type_WebAPISchemaFilter in types_SchemaFilters)
                 {
                     options.SchemaFilterDescriptors.Add(new FilterDescriptor
                     {
-                        Type = type_SchemaFilter,
+                        Type = type_WebAPISchemaFilter,
+                        Arguments = []
+                    });
+                }
+
+                foreach (Type type_WebAPIDocumentFilter in types_DocumentFilters)
+                {
+                    options.DocumentFilterDescriptors.Add(new FilterDescriptor
+                    {
+                        Type = type_WebAPIDocumentFilter,
                         Arguments = []
                     });
                 }
 
                 foreach (Assembly assembly in AssemblyLoadContext.Default.Assemblies)
                 {
-                    // Avoid dynamic assemblies (like those created by EF or Reflection.Emit)
                     if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
                     {
                         continue;
@@ -288,61 +268,136 @@ namespace DiGi.WebAPI.WindowsService
                     }
                 }
             });
-
-            Serilog.Modify.Log("Swagger added");
-
-            bool useAuthorization = serviceCollection.Any(x => x.ServiceType == typeof(Microsoft.AspNetCore.Authorization.IAuthorizationService));
-
-            WebApplication webApplication = webApplicationBuilder.Build();
-
-            webApplication.UseSwagger();
-            Serilog.Modify.Log("Swagger in use");
-
-            // Configure the HTTP request pipeline.
-            if (isDevelopment)
-            {
-                webApplication.UseSwaggerUI();
-                Serilog.Modify.Log("Swagger UI in use");
-            }
-
-            webApplication.UseHttpsRedirection();
-
-            webApplication.UseCors(corsPolicyName);
-
-            webApplication.UseRequestDecompression();
-
-            if (useAuthorization)
-            {
-                Serilog.Modify.Log("Authorization in use");
-                webApplication.UseAuthorization();
-            }
-            else
-            {
-                Serilog.Modify.Log("Authorization not in use");
-            }
-
-            webApplication.MapControllers();
-
-            Serilog.Modify.Log("WindowsService initialization ended");
-
-            webApplication.Run();
         }
 
-        public static async Task Main(string[] args)
+        private static void ForceCamelCaseModifier(JsonTypeInfo jsonTypeInfo)
         {
-            if (args.Contains("--install"))
+            if (jsonTypeInfo.Kind != JsonTypeInfoKind.Object)
             {
-                await Install();
                 return;
             }
 
-            if (args.Contains("--uninstall"))
+            foreach (JsonPropertyInfo jsonPropertyInfo in jsonTypeInfo.Properties)
             {
-                await Uninstall();
+                if (jsonPropertyInfo.AttributeProvider is MemberInfo memberInfo)
+                {
+                    jsonPropertyInfo.Name = JsonNamingPolicy.CamelCase.ConvertName(memberInfo.Name);
+                }
+            }
+        }
+
+        private static async Task LoadExtensionsAsync(IMvcBuilder mvcBuilder, IServiceCollection serviceCollection, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters)
+        {
+            Dictionary<string, Assembly> dictionary_LoadedAssembly = [];
+            string? directory_Assembly = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+
+            if (string.IsNullOrWhiteSpace(directory_Assembly))
+            {
                 return;
             }
 
-            await Run(args);
+            string directory_Extensions = Path.Combine(directory_Assembly, "extensions");
+            Serilog.Modify.Log("Extensions directory: {Directory}", directory_Extensions);
+
+            if (Directory.Exists(directory_Extensions))
+            {
+                Serilog.Modify.Log("Loading extensions started");
+
+                string[] directories = Directory.GetDirectories(directory_Extensions);
+                foreach (string directory in directories)
+                {
+                    Serilog.Modify.Log("Extension directory: {Directory}", directory);
+
+                    // Restored filtering by Query.ExcludedLibrary
+                    List<string> paths = [.. Directory.GetFiles(directory, "*.dll").Where(path => !Query.ExcludedLibrary(path))];
+
+                    IEnumerable<AssemblyDependencyResolver> assemblyDependencyResolvers = paths.Select(path => new AssemblyDependencyResolver(path));
+
+                    AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
+                    {
+                        if (dictionary_LoadedAssembly.TryGetValue(assemblyName.FullName, out Assembly? existing))
+                        {
+                            return existing;
+                        }
+
+                        Assembly? assembly_AlreadyInRuntime = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(a => a.GetName().Name == assemblyName.Name);
+                        if (assembly_AlreadyInRuntime != null)
+                        {
+                            return assembly_AlreadyInRuntime;
+                        }
+
+                        foreach (AssemblyDependencyResolver assemblyDependencyResolver in assemblyDependencyResolvers)
+                        {
+                            string? assemblyPath = assemblyDependencyResolver.ResolveAssemblyToPath(assemblyName);
+                            if (assemblyPath != null)
+                            {
+                                Assembly resolvedAssembly = context.LoadFromAssemblyPath(assemblyPath);
+                                dictionary_LoadedAssembly[assemblyName.FullName] = resolvedAssembly;
+                                return resolvedAssembly;
+                            }
+                        }
+                        return null;
+                    };
+
+                    foreach (string path in paths)
+                    {
+                        Serilog.Modify.Log("Investigating extension file: {path}", path);
+
+                        try
+                        {
+                            Assembly assembly = AssemblyLoadContext.Default.LoadFromAssemblyPath(path);
+                            if (assembly is null)
+                            {
+                                Serilog.Modify.Log("Invalid assembly extension file. Extension file skipped");
+                                continue;
+                            }
+
+                            IEnumerable<Type> types_WebAPISchemaFilter_Assembly = assembly.GetTypes().Where(type => typeof(IWebAPISchemaFilter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+                            if (types_WebAPISchemaFilter_Assembly != null && types_WebAPISchemaFilter_Assembly.Any())
+                            {
+                                types_SchemaFilters.AddRange(types_WebAPISchemaFilter_Assembly);
+                            }
+
+                            IEnumerable<Type> types_WebAPIDocumentFilter_Assembly = assembly.GetTypes().Where(type => typeof(IWebAPIDocumentFilter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
+                            if (types_WebAPIDocumentFilter_Assembly != null && types_WebAPIDocumentFilter_Assembly.Any())
+                            {
+                                types_DocumentFilters.AddRange(types_WebAPIDocumentFilter_Assembly);
+                            }
+
+                            mvcBuilder.AddApplicationPart(assembly);
+
+                            // Restored async evaluation and logging logic
+                            bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
+                            if (succedded)
+                            {
+                                Serilog.Modify.Log("Extension file initialized successfully");
+                            }
+                            else
+                            {
+                                Serilog.Modify.Log("Extension file skipped");
+                            }
+                        }
+                        catch (Exception exception)
+                        {
+                            Serilog.Modify.Log(exception, "Extension file loading failed");
+                        }
+                    }
+                }
+                Serilog.Modify.Log("Loading extensions ended");
+            }
+        }
+
+        private static async Task Uninstall()
+        {
+            ProcessStartInfo processInfo = new ()
+            {
+                FileName = "sc.exe",
+                Arguments = $"delete {Constants.Name.Service}",
+                UseShellExecute = true,
+                Verb = "runas"
+            };
+
+            Process.Start(processInfo)?.WaitForExit();
         }
     }
 }
