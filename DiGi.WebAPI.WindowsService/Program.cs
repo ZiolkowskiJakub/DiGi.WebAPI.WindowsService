@@ -166,12 +166,20 @@ namespace DiGi.WebAPI.WindowsService
 
             serviceCollection.AddRequestDecompression();
 
+            List<string> origins = ["https://digiproject.uk", "https://*.digiproject.uk"];
+
+            if(isDevelopment)
+            {
+                origins.Add("https://localhost:5000");
+                origins.Add("https://localhost:5001");
+            }
+
             serviceCollection.AddCors(options =>
             {
                 options.AddPolicy(name: Constants.Name.Policy,
                     policy =>
                     {
-                        policy.WithOrigins("https://digiproject.uk", "https://*.digiproject.uk")
+                        policy.WithOrigins(origins.ToArray())
                               .SetIsOriginAllowedToAllowWildcardSubdomains()
                               .AllowAnyHeader()
                               .AllowAnyMethod();
@@ -209,11 +217,11 @@ namespace DiGi.WebAPI.WindowsService
 
             serviceCollection.AddEndpointsApiExplorer();
 
-            ConfigureSwagger(serviceCollection, types_SchemaFilters, types_DocumentFilters);
+            ConfigureSwagger(serviceCollection, types_SchemaFilters, types_DocumentFilters, isDevelopment);
             Serilog.Modify.Log("Swagger added");
         }
 
-        private static void ConfigureSwagger(IServiceCollection serviceCollection, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters)
+        private static void ConfigureSwagger(IServiceCollection serviceCollection, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters, bool isDevelopment)
         {
             serviceCollection.AddSwaggerGen(options =>
             {
@@ -226,6 +234,11 @@ namespace DiGi.WebAPI.WindowsService
                     Version = "v1",
                     Description = "API for exchanging data with DiGi software"
                 });
+
+                if(!isDevelopment)
+                {
+                    options.AddServer(new OpenApiServer { Url = "https://api.digiproject.uk" });
+                }
 
                 foreach (Type type_WebAPISchemaFilter in types_SchemaFilters)
                 {
