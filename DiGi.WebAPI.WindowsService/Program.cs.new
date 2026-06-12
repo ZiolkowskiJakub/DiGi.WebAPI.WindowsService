@@ -28,7 +28,7 @@ namespace DiGi.WebAPI.WindowsService
     public class Program
     {
         /// <summary>
-        /// Installs the application as a Windows Service using the system service controller (sc.exe).
+        /// Installs the current application as a Windows Service using the system service controller (sc.exe).
         /// </summary>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public static async Task Install()
@@ -51,7 +51,7 @@ namespace DiGi.WebAPI.WindowsService
         }
 
         /// <summary>
-        /// The main entry point of the application which determines whether to install, uninstall, or run the service based on command-line arguments.
+        /// The main entry point for the application. Processes command-line arguments to determine whether to install, uninstall, or run the service.
         /// </summary>
         /// <param name="args">An array of command-line arguments passed to the application.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
@@ -73,9 +73,9 @@ namespace DiGi.WebAPI.WindowsService
         }
 
         /// <summary>
-        /// Configures and executes the Web API as a Windows Service, including environment setup, logging initialization, and service lifetime configuration.
+        /// Configures and starts the Web API host as a Windows Service.
         /// </summary>
-        /// <param name="args">An array of command-line arguments used to configure the web application options.</param>
+        /// <param name="args">An array of command-line arguments passed to the application.</param>
         /// <returns>A <see cref="Task"/> representing the asynchronous operation.</returns>
         public static async Task Run(string[] args)
         {
@@ -385,49 +385,4 @@ namespace DiGi.WebAPI.WindowsService
                             IEnumerable<Type> types_WebAPISchemaFilter_Assembly = assembly.GetTypes().Where(type => typeof(IWebAPISchemaFilter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
                             if (types_WebAPISchemaFilter_Assembly != null && types_WebAPISchemaFilter_Assembly.Any())
                             {
-                                types_SchemaFilters.AddRange(types_WebAPISchemaFilter_Assembly);
-                            }
-
-                            IEnumerable<Type> types_WebAPIDocumentFilter_Assembly = assembly.GetTypes().Where(type => typeof(IWebAPIDocumentFilter).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract);
-                            if (types_WebAPIDocumentFilter_Assembly != null && types_WebAPIDocumentFilter_Assembly.Any())
-                            {
-                                types_DocumentFilters.AddRange(types_WebAPIDocumentFilter_Assembly);
-                            }
-
-                            mvcBuilder.AddApplicationPart(assembly);
-
-                            // Restored async evaluation and logging logic
-                            bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
-                            if (succedded)
-                            {
-                                Serilog.Modify.Log("Extension file initialized successfully");
-                            }
-                            else
-                            {
-                                Serilog.Modify.Log("Extension file skipped");
-                            }
-                        }
-                        catch (Exception exception)
-                        {
-                            Serilog.Modify.Log(exception, "Extension file loading failed");
-                        }
-                    }
-                }
-                Serilog.Modify.Log("Loading extensions ended");
-            }
-        }
-
-        private static async Task Uninstall()
-        {
-            ProcessStartInfo processInfo = new ()
-            {
-                FileName = "sc.exe",
-                Arguments = $"delete {Constants.Name.Service}",
-                UseShellExecute = true,
-                Verb = "runas"
-            };
-
-            Process.Start(processInfo)?.WaitForExit();
-        }
-    }
-}
+                                types_SchemaFilters.AddRange(types_WebAPISchema

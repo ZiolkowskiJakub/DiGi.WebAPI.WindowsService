@@ -1,4 +1,4 @@
-﻿using DiGi.WebAPI.Classes;
+using DiGi.WebAPI.Classes;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -9,6 +9,14 @@ namespace DiGi.WebAPI.WindowsService
 {
     public static partial class Modify
     {
+        /// <summary>
+        /// Initializes the specified assembly by scanning for classes inheriting from <see cref="WebAPIController"/> 
+        /// and executing any static initialization methods named "Initialize" or "InitializeAsync" within a class named "Modify".
+        /// </summary>
+        /// <param name="assembly">The assembly to be scanned for controllers and initialization logic.</param>
+        /// <param name="serviceCollection">The <see cref="IServiceCollection"/> used to register services and controllers.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if 
+        /// controllers were registered or initialization methods were successfully executed; otherwise, <see langword="false"/>.</returns>
         public static async Task<bool> InitializeAsync(this Assembly? assembly, IServiceCollection? serviceCollection)
         {
             if (assembly is null || serviceCollection is null)
