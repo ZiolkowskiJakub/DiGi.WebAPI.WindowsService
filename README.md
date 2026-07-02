@@ -78,7 +78,7 @@ This project strictly separates data models from business logic using Anemic Mod
 - **Enums:** Place in the `/Enums` directory (Namespace: `[Project].Enums`).
 
 ### 2. Business Logic (Extension Methods)
-ALL complex functionalities, including operations on classes, interfaces, and enums, MUST be implemented as **Extension Methods** inside one of three specific static partial classes. Do not create new manager/service classes. 
+ALL complex functionalities, including operations on classes, interfaces, and enums, MUST be implemented as **Extension Methods** inside one of four specific static partial classes. Do not create new manager/service classes. 
 
 * **Query (Read/Extract):**
     * **Directory:** `/Query`
@@ -92,6 +92,10 @@ ALL complex functionalities, including operations on classes, interfaces, and en
     * **Directory:** `/Create`
     * **Class:** `public static partial class Create`
     * **Purpose:** Complex functionalities that create and return a completely new object based on input data.
+* **Convert (Parse/Format/Transform):**
+    * **Directory:** `/Convert` (organized in `/Convert/To[TargetArea]` subdirectories, e.g., `/Convert/ToSystem`, `/Convert/ToEPW`, `/Convert/ToDiGi`)
+    * **Class:** `public static partial class Convert`
+    * **Purpose:** Complex functionalities that convert, format, or transform an object or raw components into another representation. Extension methods should follow the naming pattern `To[TargetArea]_[TargetType]` (e.g., `ToSystem_String`, `ToSystem_DateTime`, `ToEPW_DateTime`).
 
 ---
 
