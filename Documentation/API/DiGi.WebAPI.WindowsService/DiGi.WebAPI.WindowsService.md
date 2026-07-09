@@ -1,4 +1,4 @@
-#### [DiGi\.WebAPI\.WindowsService](index.md 'index')
+#### [DiGi\.WebAPI\.WindowsService](DiGi.WebAPI.WindowsService.Overview.md 'DiGi\.WebAPI\.WindowsService\.Overview')
 
 ## DiGi\.WebAPI\.WindowsService Namespace
 ### Classes
