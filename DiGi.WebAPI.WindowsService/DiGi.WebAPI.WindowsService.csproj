@@ -12,6 +12,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- MathNet.Numerics is a NuGet dependency of DiGi.Math, which every extension in bin\extensions reaches
+         through its DiGi.Geometry HintPath. Extensions are loaded into AssemblyLoadContext.Default, so this
+         host output is on their probe path - declaring it once here covers all of them. -->
+    <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.8" />
     <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
