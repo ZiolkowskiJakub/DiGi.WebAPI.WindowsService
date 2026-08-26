@@ -34,4 +34,20 @@
     </Reference>
   </ItemGroup>
 
+  <Target Name="CopyFiles" AfterTargets="Build">
+    <ItemGroup>
+      <_Files Include="$(ProjectDir)..\files\**\*.*" />
+    </ItemGroup>
+    <Message Text="Copying all files from directory..." Importance="high" />
+    <Copy SourceFiles="@(_Files)" DestinationFiles="@(_Files->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="CopyUserFiles" AfterTargets="Build">
+    <ItemGroup>
+      <_UserFiles Include="$(ProjectDir)..\user files\**\*.*" />
+    </ItemGroup>
+    <Message Text="Copying all user files from directory..." Importance="high" />
+    <Copy SourceFiles="@(_UserFiles)" DestinationFiles="@(_UserFiles->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

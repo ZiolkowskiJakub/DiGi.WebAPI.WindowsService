@@ -212,6 +212,11 @@ namespace DiGi.WebAPI.WindowsService
                 };
             });
 
+            // Loaded once here rather than per request: InformationController falls back to reading the
+            // configuration file from disk in its constructor, and controllers are activated per request.
+            serviceCollection.AddSingleton(WebAPI.Create.DiagnosticsConfiguration());
+            Serilog.Modify.Log("Diagnostics configuration loaded");
+
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
             mvcBuilder.AddJsonOptions(options =>
             {

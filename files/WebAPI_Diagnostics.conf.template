@@ -1,0 +1,45 @@
+# =====================================================================
+# DiGi WebAPI Diagnostic Endpoints Configuration TEMPLATE
+# =====================================================================
+# This file is a template and is never read at runtime - the '.template'
+# suffix keeps it from overwriting the live secret, because both 'files/'
+# and 'user files/' are copied flat into the same bin/ directory.
+#
+# To enable diagnostic authentication:
+# 1. Copy this file to 'user files/WebAPI_Diagnostics.conf'
+#    (note: drop the '.template' suffix).
+# 2. Set Enabled=true.
+# 3. Define a secret access token for Key.
+#
+# ACCESS IS DENIED BY DEFAULT. If this file is absent, unreadable, has
+# Enabled=false, or has a blank Key, every protected diagnostic endpoint
+# answers HTTP 401. That is deliberate - do not "fix" it by relaxing the
+# check.
+#
+# Protected endpoints (require the key):
+#   /information/system
+#   /information/assemblies
+#   /information/controllers
+#   /information/endpoints?includeignored=true
+#   /information/version  -> commit hashes only; the endpoint itself is public
+#
+# Public endpoints (no key):
+#   /information/health
+#   /information/version (without commit hashes)
+#   /information/endpoints (public routes only)
+#
+# The key travels in the 'key' REQUEST HEADER, never in the query string:
+#   curl -H "key: your_secret" https://host/information/system
+# =====================================================================
+
+# Enable diagnostic access key enforcement (true/false).
+# false means "no key configured" -> protected endpoints answer 401.
+Enabled=false
+
+# Secret access key, sent by callers in the 'key' request header.
+Key=""
+
+# LOCAL DEVELOPMENT ONLY. The single setting that waives the key check and
+# leaves the protected tier reachable without credentials. Logs a warning on
+# startup whenever it is honoured. Never set this on a deployed host.
+Open=false
