@@ -272,6 +272,9 @@ and `DiGi.User.WebAPI` deploy into `DiGi.WebAPI.WindowsService\bin\extensions\<n
 `AssemblyLoadContext.Default` with cross-directory `AssemblyDependencyResolver`s. Audit the host output
 **together with** its `extensions\*` folders, and declare a shared dependency once on
 `DiGi.WebAPI.WindowsService` — that is already how `Microsoft.OpenApi` and `Serilog` reach the extensions.
+Because every extension shares one `DiGi.Serilog` instance, the host enables
+`Serilog.Settings.LoggerManager.RoutePerAssembly` before loading them: each extension writes
+`log-YYYYMMDD.txt` into its own `extensions\<name>\logs\` folder, and the host keeps the one in `bin\logs\`.
 
 Verify after building — both read compiled output, not project files:
 ```powershell

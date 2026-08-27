@@ -111,6 +111,12 @@ namespace DiGi.WebAPI.WindowsService
             List<Type> webAPISchemaFilters = [];
             List<Type> webAPIDocumentFilters = [];
 
+            // Extensions load from bin/extensions/<name> into AssemblyLoadContext.Default and share one
+            // LoggerManager, so route each assembly's log beside itself: every extension keeps its own
+            // logs folder while the host keeps the one beside the application.
+            Serilog.Settings.LoggerManager.RoutePerAssembly = true;
+            Serilog.Modify.Log("Per-extension log routing enabled");
+
             // Configure Services (async because of extension loading)
             await ConfigureServicesAsync(webApplicationBuilder, webAPISchemaFilters, webAPIDocumentFilters);
 
