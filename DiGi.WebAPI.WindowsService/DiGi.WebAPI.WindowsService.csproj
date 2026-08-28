@@ -42,7 +42,7 @@
     <Copy SourceFiles="@(_Files)" DestinationFiles="@(_Files->'$(OutputPath)%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
   </Target>
 
-  <Target Name="CopyUserFiles" AfterTargets="Build">
+  <Target Name="CopyUserFiles" AfterTargets="CopyFiles">
     <ItemGroup>
       <_UserFiles Include="$(ProjectDir)..\user files\**\*.*" />
     </ItemGroup>
