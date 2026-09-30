@@ -123,6 +123,81 @@ public static class Query
 Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → Query
 ### Methods
 
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentName(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.ApiDescription)'></a>
+
+## Query\.DocumentName\(this ApiDescription\) Method
+
+Gets the name of the Swagger document an API description belongs to: the first segment of its relative path, in lower case\.
+
+The segment is lower-cased explicitly because the `[controller]` route token expands to the controller name as declared (`User`), while `LowercaseUrls` only affects generated links.
+
+```csharp
+public static string? DocumentName(this Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription? apiDescription);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentName(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.ApiDescription).apiDescription'></a>
+
+`apiDescription` [Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.apiexplorer.apidescription 'Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription')
+
+The API description to classify\.
+
+#### Returns
+[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')  
+The lower\-case first route segment \(for example `gis` for `gis/Building2D/items`\), or `null` when the description or its relative path is missing or the first segment is a route parameter \(`{id}`\); such an endpoint appears in the full document only\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentNames(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider)'></a>
+
+## Query\.DocumentNames\(this IApiDescriptionGroupCollectionProvider\) Method
+
+Gets the names of the per\-route\-prefix Swagger documents: the distinct first route segments of every described endpoint\.
+
+The name of the full document ([SwaggerDocument\_Full](DiGi.WebAPI.WindowsService.Constants.md#DiGi.WebAPI.WindowsService.Constants.Name.SwaggerDocument_Full 'DiGi\.WebAPI\.WindowsService\.Constants\.Name\.SwaggerDocument\_Full')) is excluded, so a route prefix of that name cannot replace it.
+
+```csharp
+public static System.Collections.Generic.List<string> DocumentNames(this Microsoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider? apiDescriptionGroupCollectionProvider);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentNames(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider).apiDescriptionGroupCollectionProvider'></a>
+
+`apiDescriptionGroupCollectionProvider` [Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.IApiDescriptionGroupCollectionProvider](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.apiexplorer.iapidescriptiongroupcollectionprovider 'Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.IApiDescriptionGroupCollectionProvider')
+
+The provider of the API descriptions of every loaded controller, extensions included\.
+
+#### Returns
+[System\.Collections\.Generic\.List&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')  
+The document names in ordinal order; empty when the provider is `null`\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentVersion(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider,string)'></a>
+
+## Query\.DocumentVersion\(this IApiDescriptionGroupCollectionProvider, string\) Method
+
+Gets the version of the assembly whose controllers serve the endpoints of the given Swagger document\.
+
+When several assemblies share the route prefix, the highest version is returned.
+
+```csharp
+public static string? DocumentVersion(this Microsoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider? apiDescriptionGroupCollectionProvider, string? documentName);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentVersion(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider,string).apiDescriptionGroupCollectionProvider'></a>
+
+`apiDescriptionGroupCollectionProvider` [Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.IApiDescriptionGroupCollectionProvider](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.apiexplorer.iapidescriptiongroupcollectionprovider 'Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.IApiDescriptionGroupCollectionProvider')
+
+The provider of the API descriptions of every loaded controller, extensions included\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.DocumentVersion(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.IApiDescriptionGroupCollectionProvider,string).documentName'></a>
+
+`documentName` [System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')
+
+The document name, as returned by [DocumentName\(this ApiDescription\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.DocumentName(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.ApiDescription) 'DiGi\.WebAPI\.WindowsService\.Query\.DocumentName\(this Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription\)')\.
+
+#### Returns
+[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')  
+The three\-part assembly version \(for example `0.8.8`\), or `null` when no controller serves the document or its assembly carries no version\.
+
 <a name='DiGi.WebAPI.WindowsService.Query.ExcludedLibrary(string)'></a>
 
 ## Query\.ExcludedLibrary\(string\) Method

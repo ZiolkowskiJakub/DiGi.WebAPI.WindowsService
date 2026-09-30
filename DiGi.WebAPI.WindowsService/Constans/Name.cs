@@ -14,5 +14,11 @@ namespace DiGi.WebAPI.WindowsService.Constants
         /// The name of the policy used for managing subdomains.
         /// </summary>
         public const string Policy = "DiGi_Subdomains_Policy";
+
+        /// <summary>
+        /// The name of the Swagger document that includes every endpoint, regardless of its route prefix.
+        /// <para>Served at <c>/swagger/full/swagger.json</c> and, through a rewrite, at <c>/swagger/swagger.json</c>. No route prefix may use this name.</para>
+        /// </summary>
+        public const string SwaggerDocument_Full = "full";
     }
 }

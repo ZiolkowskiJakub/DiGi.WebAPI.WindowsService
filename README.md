@@ -44,8 +44,17 @@ sc.exe delete DiGi.WebAPI.WindowsService          # legacy fallback
 
 ## Endpoint check
 
-- Local: <http://localhost:5010/swagger/index.html>
+- Local: <http://localhost:5010/swagger/index.html> (Swagger UI, Development environment only; the document dropdown lists Full and one entry per route prefix)
 - Public: <https://api.digiproject.uk/information/controllers>
+
+## Swagger documents
+
+One OpenAPI document per first route segment, discovered at start-up from the loaded controllers (extensions included), plus the full document:
+
+- Full: <https://api.digiproject.uk/swagger/swagger.json> (also `/swagger/full/swagger.json`)
+- Per prefix: `https://api.digiproject.uk/swagger/<prefix>/swagger.json` — `gis`, `user`, `gltf`, `information`
+
+A prefix document holds only its own paths and schemas; its `info.version` is the version of the extension assembly serving it. A prefix with no Swagger-visible endpoint has no document (404). Prefer the prefix document over the full one — `gis` alone is ~93 % of the full file, the others are a few KB.
 
 ## 💻 Coding Guidelines for Developers & AI Agents
 
@@ -604,7 +613,7 @@ also mirrored per repository as a skill under `.agents/skills/<skill-name>/SKILL
 | `Coding - WebAPI GLTF.md` | Building or extending a Web API on the `DiGi.GLTF` 3D framework. |
 | `Coding - WebAPI Contracts.md` | Changing a WebAPI route/parameter, or writing an HTTP client of one. |
 | `Coding - WebAPI Simple Authorization.md` | Simple API-key-based tiered authorization for WebAPI controllers (deny-by-default, `key` request header, `.conf` assets, `SyncDirectories.ps1` alignment). |
-| `Coding - Deployed WebAPI.md` | Verifying a change against the live API at `api.digiproject.uk` (read-only GET; never in `DiGi.Test`). |
+| `Coding - Deployed WebAPI.md` | Verifying a change against the live API at `api.digiproject.uk` (read-only GET; never in `DiGi.Test`); which per-prefix Swagger document to fetch (`/swagger/<prefix>/swagger.json`) to keep context small. |
 | `Coding - Browser Testing.md` | Verifying interactive front-end behaviour in a real browser (Playwright driving an installed Chromium-based browser) — panel toggles, drag-resize with clamps, keyboard operability, `localStorage` persistence, responsive stacking, shared header/footer collapse; confirm the toolchain on THIS machine first. |
 | `Coding - GIS Administrative Data.md` | Touching `administrative_areal_2d`, `building_2d`, or anything keyed by a county code or id. |
 | `Coding - PostgreSQL.md` | Designing schemas, composite unique constraints, batching, timeouts, or converters in PostgreSQL/Npgsql. |

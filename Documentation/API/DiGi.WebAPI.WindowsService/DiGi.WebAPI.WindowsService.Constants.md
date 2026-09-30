@@ -41,3 +41,18 @@ public const string Service = "DiGi.WebAPI.WindowsService";
 
 #### Field Value
 [System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')
+
+<a name='DiGi.WebAPI.WindowsService.Constants.Name.SwaggerDocument_Full'></a>
+
+## Name\.SwaggerDocument\_Full Field
+
+The name of the Swagger document that includes every endpoint, regardless of its route prefix\.
+
+Served at `/swagger/full/swagger.json` and, through a rewrite, at `/swagger/swagger.json`. No route prefix may use this name.
+
+```csharp
+public const string SwaggerDocument_Full = "full";
+```
+
+#### Field Value
+[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')

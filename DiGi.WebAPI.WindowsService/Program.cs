@@ -2,6 +2,8 @@ using DiGi.WebAPI.Interfaces;
 using DiGi.WebAPI.WindowsService.Classes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
@@ -131,12 +133,26 @@ namespace DiGi.WebAPI.WindowsService
 
         private static void ConfigurePipeline(WebApplication webApplication)
         {
+            // /swagger/swagger.json is the short address of the full document. Rewritten internally (no redirect)
+            // because Swashbuckle's route template must contain {documentName}.
+            webApplication.UseRewriter(new RewriteOptions().AddRewrite(@"^swagger/swagger\.json$", $"swagger/{Constants.Name.SwaggerDocument_Full}/swagger.json", skipRemainingRules: true));
+
             webApplication.UseSwagger();
             Serilog.Modify.Log("Swagger in use");
 
             if (webApplication.Environment.IsDevelopment())
             {
-                webApplication.UseSwaggerUI();
+                List<string> documentNames = webApplication.Services.GetRequiredService<IApiDescriptionGroupCollectionProvider>().DocumentNames();
+
+                webApplication.UseSwaggerUI(swaggerUIOptions =>
+                {
+                    swaggerUIOptions.SwaggerEndpoint("/swagger/swagger.json", "Full");
+
+                    foreach (string documentName in documentNames)
+                    {
+                        swaggerUIOptions.SwaggerEndpoint($"/swagger/{documentName}/swagger.json", documentName);
+                    }
+                });
                 Serilog.Modify.Log("Swagger UI in use");
             }
 
@@ -256,12 +272,15 @@ namespace DiGi.WebAPI.WindowsService
                 options.DescribeAllParametersInCamelCase();
                 options.SchemaFilter<CamelCaseSchemaFilter>();
 
-                options.SwaggerDoc("v1", new OpenApiInfo
+                options.SwaggerDoc(Constants.Name.SwaggerDocument_Full, new OpenApiInfo
                 {
                     Title = "Data Exchange API",
-                    Version = "v1",
+                    Version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0",
                     Description = "API for exchanging data with DiGi software"
                 });
+
+                // The full document takes every endpoint; each per-prefix document takes the endpoints under its prefix.
+                options.DocInclusionPredicate((documentName, apiDescription) => documentName == Constants.Name.SwaggerDocument_Full || string.Equals(apiDescription.DocumentName(), documentName, StringComparison.Ordinal));
 
                 if(!isDevelopment)
                 {
@@ -307,6 +326,23 @@ namespace DiGi.WebAPI.WindowsService
                             Serilog.Modify.Log(exception, "Swagger: Could not load XML for {Path}", path_Xml);
                         }
                     }
+                }
+            });
+
+            // One document per route prefix (gis, user, ...). Deferred until SwaggerGenOptions are first resolved,
+            // because the routes of the extensions are known to ApiExplorer only after the application is built.
+            serviceCollection.AddOptions<SwaggerGenOptions>().Configure<IApiDescriptionGroupCollectionProvider>((swaggerGenOptions, apiDescriptionGroupCollectionProvider) =>
+            {
+                foreach (string documentName in apiDescriptionGroupCollectionProvider.DocumentNames())
+                {
+                    swaggerGenOptions.SwaggerDoc(documentName, new OpenApiInfo
+                    {
+                        Title = $"Data Exchange API - {documentName}",
+                        Version = apiDescriptionGroupCollectionProvider.DocumentVersion(documentName) ?? "0.0.0",
+                        Description = $"Endpoints under /{documentName}"
+                    });
+
+                    Serilog.Modify.Log("Swagger: Document registered for {DocumentName}", documentName);
                 }
             });
         }

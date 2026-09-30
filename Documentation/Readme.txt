@@ -19,4 +19,8 @@ sc delete DiGi.WebAPI.WindowsService
 Remove-Service -Name DiGi.WebAPI.WindowsService 
 
 ## Endpoint check:
-http://localhost:5010/swagger/index.html
+http://localhost:5010/swagger/index.html (Development environment only)
+
+## Swagger documents:
+http://localhost:5010/swagger/swagger.json (full; also /swagger/full/swagger.json)
+http://localhost:5010/swagger/<prefix>/swagger.json (gis, user, gltf, information)
