@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 
-namespace DiGi.WebAPI.WindowsService
+namespace DiGi.WebAPI.WindowsService.Modify
 {
     public static partial class Modify
     {

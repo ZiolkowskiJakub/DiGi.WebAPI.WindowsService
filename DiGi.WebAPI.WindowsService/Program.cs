@@ -18,6 +18,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
 using DiGi.WebAPI.WindowsService.Modify;
+using DiGi.WebAPI.WindowsService.Classes.Filters;
 
 namespace DiGi.WebAPI.WindowsService
 {
@@ -298,6 +299,7 @@ namespace DiGi.WebAPI.WindowsService
                 }
                 options.OperationFilter<SecurityRequirementOperationFilter>();
                 options.OperationFilter<ProblemDetailsResponseOperationFilter>();
+                options.OperationFilter<AddExamplesOperationFilter>();
 
                 options.IncludeAssemblyXmlComments(AssemblyLoadContext.Default.Assemblies);
             });
@@ -401,7 +403,7 @@ namespace DiGi.WebAPI.WindowsService
                             mvcBuilder.AddApplicationPart(assembly);
 
                             // Restored async evaluation and logging logic
-                            bool succedded = await Modify.InitializeAsync(assembly, serviceCollection);
+                            bool succedded = await assembly.InitializeAsync(serviceCollection);
                             if (succedded)
                             {
                                 Serilog.Modify.Log("Extension file initialized successfully");

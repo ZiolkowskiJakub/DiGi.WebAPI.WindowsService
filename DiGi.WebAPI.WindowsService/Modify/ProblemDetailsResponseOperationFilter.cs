@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Collections.Generic;
 
 namespace DiGi.WebAPI.WindowsService.Modify
 {
@@ -22,11 +23,14 @@ namespace DiGi.WebAPI.WindowsService.Modify
                     var response = kvp.Value;
                     // Ensure there is at least an application/json media type
                     if (response.Content == null)
-                        response.Content = new Dictionary<string, MediaTypeSchema>();
+                    {
+                        // Skip responses without content (e.g., 204)
+                        continue;
+                    }
 
                     if (!response.Content.ContainsKey("application/json"))
                     {
-                        response.Content["application/json"] = new MediaTypeSchema();
+                        response.Content["application/json"] = new OpenApiMediaType();
                     }
 
                     // Set the schema to ProblemDetails reference

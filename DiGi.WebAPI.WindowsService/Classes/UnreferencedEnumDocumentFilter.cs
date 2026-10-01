@@ -1,4 +1,5 @@
 using Microsoft.OpenApi;
+using DiGi.WebAPI.WindowsService.Modify;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace DiGi.WebAPI.WindowsService.Classes

@@ -3,7 +3,7 @@ using Microsoft.OpenApi;
 using System;
 using System.Linq;
 
-namespace DiGi.WebAPI.WindowsService
+namespace DiGi.WebAPI.WindowsService.Modify
 {
     public static partial class Modify
     {

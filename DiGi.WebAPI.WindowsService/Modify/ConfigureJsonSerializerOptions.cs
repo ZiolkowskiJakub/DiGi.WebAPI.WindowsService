@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 
-namespace DiGi.WebAPI.WindowsService
+namespace DiGi.WebAPI.WindowsService.Modify
 {
     public static partial class Modify
     {

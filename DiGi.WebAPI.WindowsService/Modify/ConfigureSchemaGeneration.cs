@@ -2,7 +2,7 @@ using DiGi.WebAPI.WindowsService.Classes;
 using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace DiGi.WebAPI.WindowsService
+namespace DiGi.WebAPI.WindowsService.Modify
 {
     public static partial class Modify
     {
