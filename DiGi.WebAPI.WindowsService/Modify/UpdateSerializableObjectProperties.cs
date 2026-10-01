@@ -15,7 +15,7 @@ namespace DiGi.WebAPI.WindowsService
         /// <para>Always a JSON object - also for a DiGi type that is an <c>IEnumerable</c> (a <c>Weather</c> is an <c>IEnumerable&lt;WeatherRecord&gt;</c>), which Swashbuckle on its own documents as an array.</para>
         /// <para>For a type whose JSON is its member contract (<see cref="Query.HasMemberWireFormat"/>): one property per written member (<see cref="Query.WireMembers"/>), under its exact JSON name, all of them required because the serializer writes every member - <c>null</c> explicitly. Member schemas are generated against the public property the member is named after where there is one, so field-backed types get that property's XML description; <c>readOnly</c> is cleared because the serializer reads members back regardless of setters, and a nullable member typed by a schema component is wrapped so that <c>null</c> validates against it. The schema is closed with <c>additionalProperties: false</c> unless a loaded type derives from it (<see cref="Query.DerivedTypes"/>): a member declared as the type may then hold the subclass, which is written with its extra members.</para>
         /// <para>For any other DiGi type (an interface, an abstract type, a type writing its own JSON): an open schema requiring only <c>_type</c>, the discriminator naming the concrete type whose members follow.</para>
-        /// <para>Enum members keep the schema Swashbuckle generates for them; their wire form is ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6.</para>
+        /// <para>An enum member - also the element of a collection or the value of a dictionary - is written as its underlying integer, so it is declared by an inline integer schema (<see cref="Create.OpenApiSchema"/>) carrying the member's description, the enum's and the name to integer mapping, instead of a reference to the shared enum component, which keeps listing the member names that query parameters bind (ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6).</para>
         /// </summary>
         /// <param name="openApiSchema">The schema generated for the type: its component, or the inline schema of a type Swashbuckle gives no component.</param>
         /// <param name="schemaFilterContext">The schema filter context naming the type, with the generator and repository used for member schemas.</param>
@@ -87,9 +87,30 @@ namespace DiGi.WebAPI.WindowsService
                 // property path, not for a member schema requested by MemberInfo (an int? came back non-nullable).
                 bool nullable = !type_Member.IsValueType || Nullable.GetUnderlyingType(type_Member) is not null;
 
+                // The serializer writes an enum as its underlying integer, while the shared component lists member names for
+                // the query parameters that bind them: declare the member's enum inline (#6).
+                OpenApiSchema? openApiSchema_Enum = EnumSchema(openApiSchema_Member, type_Member, nullable, openApiSchema_Member.Description, schemaFilterContext.SchemaRepository);
+                if (openApiSchema_Enum is not null)
+                {
+                    properties[name] = openApiSchema_Enum;
+                    required.Add(name);
+                    continue;
+                }
+
                 if (openApiSchema_Member is OpenApiSchema openApiSchema_Member_Concrete)
                 {
                     openApiSchema_Member_Concrete.ReadOnly = false;
+
+                    // A collection or dictionary of enums: its elements are written as integers too.
+                    if (EnumSchema(openApiSchema_Member_Concrete.Items, ElementType(type_Member, false), null, null, schemaFilterContext.SchemaRepository) is OpenApiSchema openApiSchema_Item)
+                    {
+                        openApiSchema_Member_Concrete.Items = openApiSchema_Item;
+                    }
+
+                    if (EnumSchema(openApiSchema_Member_Concrete.AdditionalProperties, ElementType(type_Member, true), null, null, schemaFilterContext.SchemaRepository) is OpenApiSchema openApiSchema_Value)
+                    {
+                        openApiSchema_Member_Concrete.AdditionalProperties = openApiSchema_Value;
+                    }
 
                     // A schema without a type already admits null; flagging it would narrow it to null only.
                     if (nullable && openApiSchema_Member_Concrete.Type is JsonSchemaType jsonSchemaType)
@@ -115,6 +136,67 @@ namespace DiGi.WebAPI.WindowsService
             openApiSchema.Required = required;
             openApiSchema.AdditionalPropertiesAllowed = derived;
             openApiSchema.AdditionalProperties = null;
+
+            // The inline integer schema replacing a reference to an enum component, described by the given description (the
+            // member's) followed by the component's (the enum's); null when the schema is no such reference. Nullability
+            // defaults to the type's own: a nullable enum element admits null, an enum element does not.
+            static OpenApiSchema? EnumSchema(IOpenApiSchema? openApiSchema, Type? type, bool? nullable, string? description, SchemaRepository schemaRepository)
+            {
+                if (openApiSchema is not OpenApiSchemaReference openApiSchemaReference || type is null)
+                {
+                    return null;
+                }
+
+                if (!(Nullable.GetUnderlyingType(type) ?? type).IsEnum)
+                {
+                    return null;
+                }
+
+                List<string> descriptions = [];
+                if (!string.IsNullOrWhiteSpace(description))
+                {
+                    descriptions.Add(description);
+                }
+
+                if (openApiSchemaReference.Reference.Id is string id && schemaRepository.Schemas.TryGetValue(id, out IOpenApiSchema? openApiSchema_Component) && !string.IsNullOrWhiteSpace(openApiSchema_Component.Description))
+                {
+                    descriptions.Add(openApiSchema_Component.Description);
+                }
+
+                return Create.OpenApiSchema(type, descriptions.Count == 0 ? null : string.Join("\n\n", descriptions), nullable ?? false);
+            }
+
+            // The element type of a collection, or the value type of a dictionary keyed by anything; null when the type is
+            // neither.
+            static Type? ElementType(Type type, bool dictionary)
+            {
+                if (!dictionary && type.IsArray)
+                {
+                    return type.GetElementType();
+                }
+
+                Type[] types = type.IsInterface ? [type, .. type.GetInterfaces()] : type.GetInterfaces();
+                foreach (Type type_Interface in types)
+                {
+                    if (!type_Interface.IsGenericType)
+                    {
+                        continue;
+                    }
+
+                    Type type_Definition = type_Interface.GetGenericTypeDefinition();
+                    if (dictionary && (type_Definition == typeof(IDictionary<,>) || type_Definition == typeof(IReadOnlyDictionary<,>)))
+                    {
+                        return type_Interface.GetGenericArguments()[1];
+                    }
+
+                    if (!dictionary && type_Definition == typeof(IEnumerable<>))
+                    {
+                        return type_Interface.GetGenericArguments()[0];
+                    }
+                }
+
+                return null;
+            }
 
             static OpenApiSchema TypeSchema(string? fullTypeName, bool derived)
             {

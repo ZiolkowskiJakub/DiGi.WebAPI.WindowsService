@@ -3,6 +3,56 @@
 ## DiGi\.WebAPI\.WindowsService Namespace
 ### Classes
 
+<a name='DiGi.WebAPI.WindowsService.Create'></a>
+
+## Create Class
+
+```csharp
+public static class Create
+```
+
+Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → Create
+### Methods
+
+<a name='DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool)'></a>
+
+## Create\.OpenApiSchema\(this Type, string, bool\) Method
+
+Creates the inline schema of an enum as the DiGi serializer writes it: an integer, the member's underlying value\.
+
+The values are listed in numeric order ([EnumMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.EnumMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.EnumMembers\(this System\.Type\)')), named for code generators in the same order by `x-enum-varnames` (openapi-generator) and `x-enumNames` (NSwag), and mapped to the member names in the description. The format is `int64` for a `long`, `uint` or `ulong` enum, `int32` otherwise, and left out when a `ulong` value exceeds `int64`.
+
+A nullable enum gets the `null` type and `null` last among the values: OpenAPI 3.0's `nullable` widens `type` only, so a value list without `null` would still reject the explicit `null` the serializer writes. A `[Flags]` enum lists no values - a combined value is in no member list - and describes its bits instead; an enum without members lists no values either, because an empty list would reject everything.
+
+See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6: the shared enum component stays the string schema query parameters bind against, so a DiGi payload member declares its enum inline.
+
+```csharp
+public static Microsoft.OpenApi.OpenApiSchema? OpenApiSchema(this System.Type? type, string? description=null, bool nullable=false);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The enum type, or a nullable enum type \(which makes the schema nullable\)\.
+
+<a name='DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool).description'></a>
+
+`description` [System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')
+
+The description to start with \- the member's and the enum's; the wire mapping is appended to it\.
+
+<a name='DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool).nullable'></a>
+
+`nullable` [System\.Boolean](https://learn.microsoft.com/en-us/dotnet/api/system.boolean 'System\.Boolean')
+
+Whether the value may be `null`, besides a nullable enum type\.
+
+#### Returns
+[Microsoft\.OpenApi\.OpenApiSchema](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapischema 'Microsoft\.OpenApi\.OpenApiSchema')  
+The inline integer schema; `null` when the type is `null` or not an enum\.
+
 <a name='DiGi.WebAPI.WindowsService.Modify'></a>
 
 ## Modify Class
@@ -57,8 +107,9 @@ The MVC JSON serializer options to configure\.
 
 ## Modify\.ConfigureSchemaGeneration\(this SwaggerGenOptions\) Method
 
-Applies the host's schema and parameter naming conventions to the Swagger generator: camelCase query parameters
-and the schema filter that shapes every payload schema\.
+Applies the host's schema and parameter naming conventions to the Swagger generator: camelCase query parameters,
+the schema filter that shapes every payload schema, the integer values on the description of every enum
+parameter, and the removal of the enum components that only DiGi payloads used \(ZiolkowskiJakub/DiGi\.WebAPI\.WindowsService\#6\)\.
 
 Kept apart from the document registration in `Program` so that tests generate schemas through exactly the configuration the host serves.
 
@@ -128,6 +179,54 @@ The [Microsoft\.Extensions\.DependencyInjection\.IServiceCollection](https://lea
 A task that represents the asynchronous operation\. The task result is [true](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool 'https://docs\.microsoft\.com/en\-us/dotnet/csharp/language\-reference/builtin\-types/bool') if 
             controllers were registered or initialization methods were successfully executed; otherwise, [false](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool 'https://docs\.microsoft\.com/en\-us/dotnet/csharp/language\-reference/builtin\-types/bool')\.
 
+<a name='DiGi.WebAPI.WindowsService.Modify.RemoveUnreferencedEnumSchemas(thisMicrosoft.OpenApi.OpenApiDocument)'></a>
+
+## Modify\.RemoveUnreferencedEnumSchemas\(this OpenApiDocument\) Method
+
+Removes every enum component that nothing in the document references\.
+
+A DiGi payload member declares its enum inline ([OpenApiSchema\(this Type, string, bool\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool) 'DiGi\.WebAPI\.WindowsService\.Create\.OpenApiSchema\(this System\.Type, string, bool\)')), but generating the member's schema still registers the shared component, which lists member names. An enum used only by DiGi payloads would therefore stay in the document unreferenced, advertising the string form its payloads do not carry; an enum referenced by a query parameter or an MVC payload is kept. Only enum components are removed - an unreferenced object component is left alone. See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6.
+
+The host registers it in [ConfigureSchemaGeneration\(this SwaggerGenOptions\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.ConfigureSchemaGeneration(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions) 'DiGi\.WebAPI\.WindowsService\.Modify\.ConfigureSchemaGeneration\(this Swashbuckle\.AspNetCore\.SwaggerGen\.SwaggerGenOptions\)'), ahead of any `IWebAPIDocumentFilter` an extension brings: such a filter adding a reference to an enum component would find it removed. No loaded extension has one (2026-10-01).
+
+```csharp
+public static void RemoveUnreferencedEnumSchemas(this Microsoft.OpenApi.OpenApiDocument? openApiDocument);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.RemoveUnreferencedEnumSchemas(thisMicrosoft.OpenApi.OpenApiDocument).openApiDocument'></a>
+
+`openApiDocument` [Microsoft\.OpenApi\.OpenApiDocument](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapidocument 'Microsoft\.OpenApi\.OpenApiDocument')
+
+The document to clean up\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateEnumParameterDescriptions(thisMicrosoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription)'></a>
+
+## Modify\.UpdateEnumParameterDescriptions\(this OpenApiOperation, ApiDescription\) Method
+
+Appends the integer values of the enum to the description of every operation parameter typed by an enum, and advises sending the integer\.
+
+The parameter keeps its schema - a reference to the shared component listing the member names - because that is accurate for binding: ASP.NET binds the member name and the integer alike. The integer is the stable half of that contract (`Coding - WebAPI Contracts.md`, "Send enum values as integers"): member names have been renamed (`Subdivison` to `Subdivision`, after which the old spelling is a 400) while the integers never moved. See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6.
+
+Works on the finished operation rather than per parameter because a parameter's own XML description is written by a parameter filter registered after the host's, which would overwrite text appended earlier.
+
+```csharp
+public static void UpdateEnumParameterDescriptions(this Microsoft.OpenApi.OpenApiOperation? openApiOperation, Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription? apiDescription);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateEnumParameterDescriptions(thisMicrosoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription).openApiOperation'></a>
+
+`openApiOperation` [Microsoft\.OpenApi\.OpenApiOperation](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapioperation 'Microsoft\.OpenApi\.OpenApiOperation')
+
+The operation whose parameters are described\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateEnumParameterDescriptions(thisMicrosoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription).apiDescription'></a>
+
+`apiDescription` [Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription](https://learn.microsoft.com/en-us/dotnet/api/microsoft.aspnetcore.mvc.apiexplorer.apidescription 'Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription')
+
+The API description of the operation, giving the CLR type of each parameter\.
+
 <a name='DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext)'></a>
 
 ## Modify\.UpdateSerializableObjectProperties\(this OpenApiSchema, SchemaFilterContext\) Method
@@ -140,7 +239,7 @@ For a type whose JSON is its member contract ([HasMemberWireFormat\(this Type\)]
 
 For any other DiGi type (an interface, an abstract type, a type writing its own JSON): an open schema requiring only `_type`, the discriminator naming the concrete type whose members follow.
 
-Enum members keep the schema Swashbuckle generates for them; their wire form is ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6.
+An enum member - also the element of a collection or the value of a dictionary - is written as its underlying integer, so it is declared by an inline integer schema ([OpenApiSchema\(this Type, string, bool\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Create.OpenApiSchema(thisSystem.Type,string,bool) 'DiGi\.WebAPI\.WindowsService\.Create\.OpenApiSchema\(this System\.Type, string, bool\)')) carrying the member's description, the enum's and the name to integer mapping, instead of a reference to the shared enum component, which keeps listing the member names that query parameters bind (ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6).
 
 ```csharp
 public static void UpdateSerializableObjectProperties(this Microsoft.OpenApi.OpenApiSchema? openApiSchema, Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext? schemaFilterContext);
@@ -336,6 +435,52 @@ The document name, as returned by [DocumentName\(this ApiDescription\)](DiGi.Web
 #### Returns
 [System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')  
 The three\-part assembly version \(for example `0.8.8`\), or `null` when no controller serves the document or its assembly carries no version\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.EnumMapping(thisSystem.Type)'></a>
+
+## Query\.EnumMapping\(this Type\) Method
+
+Gets the member name to integer mapping of an enum as text, in numeric order: `Undefined = -1, Country = 0, ...`, with aliases of one value joined \(`A / B = 1`\)\.
+
+The integers are what the DiGi serializer writes and what a client should send in a query parameter; rendered culture-invariant, so the text is identical on every machine.
+
+```csharp
+public static string? EnumMapping(this System.Type? type);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.EnumMapping(thisSystem.Type).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The enum type, or a nullable enum type\.
+
+#### Returns
+[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')  
+The mapping; `null` when the type is `null`, not an enum, or an enum without members\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.EnumMembers(thisSystem.Type)'></a>
+
+## Query\.EnumMembers\(this Type\) Method
+
+Gets the members of an enum by the value each one travels the wire as: one entry per distinct value, in numeric order, naming every member declared with that value in declaration order \(the first name is the member's own, the rest are aliases\)\.
+
+The value is the member's underlying integer, boxed as the enum's underlying type (an `int` for an `int`-backed enum) - what the DiGi serializer writes. Ordered numerically, not as [System\.Enum\.GetValues\(System\.Type\)](https://learn.microsoft.com/en-us/dotnet/api/system.enum.getvalues#system-enum-getvalues(system-type) 'System\.Enum\.GetValues\(System\.Type\)') returns them: that orders by the unsigned bit pattern and puts a negative value such as `Undefined = -1` last.
+
+```csharp
+public static System.Collections.Generic.List<(object Value,System.Collections.Generic.List<string> Names)> EnumMembers(this System.Type? type);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.EnumMembers(thisSystem.Type).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The enum type, or a nullable enum type\.
+
+#### Returns
+[System\.Collections\.Generic\.List&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object')[,](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[System\.Collections\.Generic\.List&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')  
+The distinct values with their member names; empty when the type is `null`, not an enum, or an enum without members\.
 
 <a name='DiGi.WebAPI.WindowsService.Query.ExcludedLibrary(string)'></a>
 
