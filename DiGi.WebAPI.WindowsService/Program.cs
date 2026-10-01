@@ -1,5 +1,4 @@
 using DiGi.WebAPI.Interfaces;
-using DiGi.WebAPI.WindowsService.Classes;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
@@ -17,9 +16,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using System.Threading.Tasks;
 
 namespace DiGi.WebAPI.WindowsService
@@ -240,18 +236,7 @@ namespace DiGi.WebAPI.WindowsService
             Serilog.Modify.Log("Diagnostics configuration loaded");
 
             IMvcBuilder mvcBuilder = serviceCollection.AddControllers();
-            mvcBuilder.AddJsonOptions(options =>
-            {
-                JsonSerializerOptions jsonSerializerOptions = options.JsonSerializerOptions;
-
-                jsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-                jsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
-                jsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-                jsonSerializerOptions.TypeInfoResolver = new DefaultJsonTypeInfoResolver
-                {
-                    Modifiers = { ForceCamelCaseModifier }
-                };
-            });
+            mvcBuilder.AddJsonOptions(options => options.JsonSerializerOptions.ConfigureJsonSerializerOptions());
 
             Serilog.Modify.Log("Extensions initialization started");
 
@@ -269,8 +254,7 @@ namespace DiGi.WebAPI.WindowsService
         {
             serviceCollection.AddSwaggerGen(options =>
             {
-                options.DescribeAllParametersInCamelCase();
-                options.SchemaFilter<CamelCaseSchemaFilter>();
+                options.ConfigureSchemaGeneration();
 
                 options.SwaggerDoc(Constants.Name.SwaggerDocument_Full, new OpenApiInfo
                 {
@@ -305,28 +289,7 @@ namespace DiGi.WebAPI.WindowsService
                     });
                 }
 
-                foreach (Assembly assembly in AssemblyLoadContext.Default.Assemblies)
-                {
-                    if (assembly.IsDynamic || string.IsNullOrWhiteSpace(assembly.Location))
-                    {
-                        continue;
-                    }
-
-                    string path_Xml = Path.ChangeExtension(assembly.Location, ".xml");
-
-                    if (File.Exists(path_Xml))
-                    {
-                        try
-                        {
-                            options.IncludeXmlComments(path_Xml);
-                            Serilog.Modify.Log("Swagger: Documentation attached for {AssemblyName}", assembly.GetName().Name ?? "???");
-                        }
-                        catch (Exception exception)
-                        {
-                            Serilog.Modify.Log(exception, "Swagger: Could not load XML for {Path}", path_Xml);
-                        }
-                    }
-                }
+                options.IncludeAssemblyXmlComments(AssemblyLoadContext.Default.Assemblies);
             });
 
             // One document per route prefix (gis, user, ...). Deferred until SwaggerGenOptions are first resolved,
@@ -345,22 +308,6 @@ namespace DiGi.WebAPI.WindowsService
                     Serilog.Modify.Log("Swagger: Document registered for {DocumentName}", documentName);
                 }
             });
-        }
-
-        private static void ForceCamelCaseModifier(JsonTypeInfo jsonTypeInfo)
-        {
-            if (jsonTypeInfo.Kind != JsonTypeInfoKind.Object)
-            {
-                return;
-            }
-
-            foreach (JsonPropertyInfo jsonPropertyInfo in jsonTypeInfo.Properties)
-            {
-                if (jsonPropertyInfo.AttributeProvider is MemberInfo memberInfo)
-                {
-                    jsonPropertyInfo.Name = JsonNamingPolicy.CamelCase.ConvertName(memberInfo.Name);
-                }
-            }
         }
 
         private static async Task LoadExtensionsAsync(IMvcBuilder mvcBuilder, IServiceCollection serviceCollection, List<Type> types_SchemaFilters, List<Type> types_DocumentFilters)

@@ -14,6 +14,72 @@ public static class Modify
 Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → Modify
 ### Methods
 
+<a name='DiGi.WebAPI.WindowsService.Modify.ConfigureJsonSerializerOptions(thisSystem.Text.Json.JsonSerializerOptions)'></a>
+
+## Modify\.ConfigureJsonSerializerOptions\(this JsonSerializerOptions\) Method
+
+Applies the host's MVC JSON conventions: camelCase property names \(including members carrying a
+[System\.Text\.Json\.Serialization\.JsonPropertyNameAttribute](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.serialization.jsonpropertynameattribute 'System\.Text\.Json\.Serialization\.JsonPropertyNameAttribute')\), enums written as their member names, and `null` values omitted\.
+
+These options govern only payloads written through the MVC formatter (`Ok(...)` POCOs, `ProblemDetails`); DiGi `ISerializableObject` payloads are written by the DiGi serializer and do not follow them.
+
+```csharp
+public static void ConfigureJsonSerializerOptions(this System.Text.Json.JsonSerializerOptions? jsonSerializerOptions);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.ConfigureJsonSerializerOptions(thisSystem.Text.Json.JsonSerializerOptions).jsonSerializerOptions'></a>
+
+`jsonSerializerOptions` [System\.Text\.Json\.JsonSerializerOptions](https://learn.microsoft.com/en-us/dotnet/api/system.text.json.jsonserializeroptions 'System\.Text\.Json\.JsonSerializerOptions')
+
+The MVC JSON serializer options to configure\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.ConfigureSchemaGeneration(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions)'></a>
+
+## Modify\.ConfigureSchemaGeneration\(this SwaggerGenOptions\) Method
+
+Applies the host's schema and parameter naming conventions to the Swagger generator: camelCase query parameters
+and the schema filter that shapes every payload schema\.
+
+Kept apart from the document registration in `Program` so that tests generate schemas through exactly the configuration the host serves.
+
+```csharp
+public static void ConfigureSchemaGeneration(this Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions? swaggerGenOptions);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.ConfigureSchemaGeneration(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions).swaggerGenOptions'></a>
+
+`swaggerGenOptions` [Swashbuckle\.AspNetCore\.SwaggerGen\.SwaggerGenOptions](https://learn.microsoft.com/en-us/dotnet/api/swashbuckle.aspnetcore.swaggergen.swaggergenoptions 'Swashbuckle\.AspNetCore\.SwaggerGen\.SwaggerGenOptions')
+
+The Swagger generator options to configure\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.IncludeAssemblyXmlComments(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions,System.Collections.Generic.IEnumerable_System.Reflection.Assembly_)'></a>
+
+## Modify\.IncludeAssemblyXmlComments\(this SwaggerGenOptions, IEnumerable\<Assembly\>\) Method
+
+Attaches the XML documentation file found beside each of the given assemblies to the Swagger generator, so that
+operations, parameters and schemas carry the `<summary>` of the code they describe\.
+
+Dynamic assemblies and assemblies without a location are skipped, as are assemblies without a sibling `.xml` file; a file that fails to load is logged and skipped.
+
+```csharp
+public static void IncludeAssemblyXmlComments(this Swashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions? swaggerGenOptions, System.Collections.Generic.IEnumerable<System.Reflection.Assembly>? assemblies);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.IncludeAssemblyXmlComments(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions,System.Collections.Generic.IEnumerable_System.Reflection.Assembly_).swaggerGenOptions'></a>
+
+`swaggerGenOptions` [Swashbuckle\.AspNetCore\.SwaggerGen\.SwaggerGenOptions](https://learn.microsoft.com/en-us/dotnet/api/swashbuckle.aspnetcore.swaggergen.swaggergenoptions 'Swashbuckle\.AspNetCore\.SwaggerGen\.SwaggerGenOptions')
+
+The Swagger generator options to configure\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.IncludeAssemblyXmlComments(thisSwashbuckle.AspNetCore.SwaggerGen.SwaggerGenOptions,System.Collections.Generic.IEnumerable_System.Reflection.Assembly_).assemblies'></a>
+
+`assemblies` [System\.Collections\.Generic\.IEnumerable&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1 'System\.Collections\.Generic\.IEnumerable\`1')[System\.Reflection\.Assembly](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.assembly 'System\.Reflection\.Assembly')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.ienumerable-1 'System\.Collections\.Generic\.IEnumerable\`1')
+
+The assemblies whose documentation is attached\.
+
 <a name='DiGi.WebAPI.WindowsService.Modify.InitializeAsync(thisSystem.Reflection.Assembly,Microsoft.Extensions.DependencyInjection.IServiceCollection)'></a>
 
 ## Modify\.InitializeAsync\(this Assembly, IServiceCollection\) Method
