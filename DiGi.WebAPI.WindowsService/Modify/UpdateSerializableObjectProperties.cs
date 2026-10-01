@@ -123,8 +123,10 @@ namespace DiGi.WebAPI.WindowsService.Modify
                     // Siblings of $ref are ignored in OpenAPI 3.0, so nullability needs a wrapper around the reference.
                     openApiSchema_Member = new OpenApiSchema
                     {
-                        AllOf = [openApiSchema_Member],
-                        Type = JsonSchemaType.Null
+                        AnyOf = new List<IOpenApiSchema> {
+                            openApiSchema_Member,
+                            new OpenApiSchema { Type = JsonSchemaType.Null }
+                        }
                     };
                 }
 
