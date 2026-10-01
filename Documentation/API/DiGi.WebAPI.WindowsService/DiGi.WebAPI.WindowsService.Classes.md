@@ -7,7 +7,7 @@
 
 ## EnumParameterDescriptionFilter Class
 
-Describes every enum\-typed operation parameter with the integer values of its enum \([UpdateEnumParameterDescriptions\(this OpenApiOperation, ApiDescription\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.UpdateEnumParameterDescriptions(thisMicrosoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription) 'DiGi\.WebAPI\.WindowsService\.Modify\.UpdateEnumParameterDescriptions\(this Microsoft\.OpenApi\.OpenApiOperation, Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription\)')\)\.
+Describes every enum\-typed operation parameter with the integer values of its enum \([UpdateEnumParameterDescriptions\(this OpenApiOperation, ApiDescription\)](DiGi.WebAPI.WindowsService.Modify.md#DiGi.WebAPI.WindowsService.Modify.Modify.UpdateEnumParameterDescriptions(thisMicrosoft.OpenApi.OpenApiOperation,Microsoft.AspNetCore.Mvc.ApiExplorer.ApiDescription) 'DiGi\.WebAPI\.WindowsService\.Modify\.Modify\.UpdateEnumParameterDescriptions\(this Microsoft\.OpenApi\.OpenApiOperation, Microsoft\.AspNetCore\.Mvc\.ApiExplorer\.ApiDescription\)')\)\.
 
 An operation filter rather than a parameter filter: operation filters run once all parameters are built, so the text survives the XML comment parameter filter, which is registered after the host's own filters and overwrites a parameter's description.
 
@@ -95,7 +95,7 @@ The reference being visited\.
 
 ## UnreferencedEnumDocumentFilter Class
 
-Removes the enum components a generated document no longer references \([RemoveUnreferencedEnumSchemas\(this OpenApiDocument\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.RemoveUnreferencedEnumSchemas(thisMicrosoft.OpenApi.OpenApiDocument) 'DiGi\.WebAPI\.WindowsService\.Modify\.RemoveUnreferencedEnumSchemas\(this Microsoft\.OpenApi\.OpenApiDocument\)')\): those whose only users were DiGi payload members, which declare their enum inline\.
+Removes the enum components a generated document no longer references \([RemoveUnreferencedEnumSchemas\(this OpenApiDocument\)](DiGi.WebAPI.WindowsService.Modify.md#DiGi.WebAPI.WindowsService.Modify.Modify.RemoveUnreferencedEnumSchemas(thisMicrosoft.OpenApi.OpenApiDocument) 'DiGi\.WebAPI\.WindowsService\.Modify\.Modify\.RemoveUnreferencedEnumSchemas\(this Microsoft\.OpenApi\.OpenApiDocument\)')\): those whose only users were DiGi payload members, which declare their enum inline\.
 
 ```csharp
 public class UnreferencedEnumDocumentFilter : Swashbuckle.AspNetCore.SwaggerGen.IDocumentFilter
@@ -137,7 +137,7 @@ Implements [Apply\(OpenApiDocument, DocumentFilterContext\)](https://learn.micro
 
 Makes every payload schema describe the format actually written on the wire, which depends on who writes the payload\.
 
-A DiGi `ISerializableObject` is written by the DiGi serializer - exact member names (PascalCase by convention), a mandatory `_type` discriminator, every member present - and its schema is rebuilt from that serializer's member contract ([UpdateSerializableObjectProperties\(this OpenApiSchema, SchemaFilterContext\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext) 'DiGi\.WebAPI\.WindowsService\.Modify\.UpdateSerializableObjectProperties\(this Microsoft\.OpenApi\.OpenApiSchema, Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext\)')). Anything else (`Ok(...)` POCOs, `ProblemDetails`) is written by the MVC formatter in camelCase, and its schema is renamed to match ([CamelCasePropertyNames\(this OpenApiSchema\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.CamelCasePropertyNames(thisMicrosoft.OpenApi.OpenApiSchema) 'DiGi\.WebAPI\.WindowsService\.Modify\.CamelCasePropertyNames\(this Microsoft\.OpenApi\.OpenApiSchema\)')).
+A DiGi `ISerializableObject` is written by the DiGi serializer - exact member names (PascalCase by convention), a mandatory `_type` discriminator, every member present - and its schema is rebuilt from that serializer's member contract ([UpdateSerializableObjectProperties\(this OpenApiSchema, SchemaFilterContext\)](DiGi.WebAPI.WindowsService.Modify.md#DiGi.WebAPI.WindowsService.Modify.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext) 'DiGi\.WebAPI\.WindowsService\.Modify\.Modify\.UpdateSerializableObjectProperties\(this Microsoft\.OpenApi\.OpenApiSchema, Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext\)')). Anything else (`Ok(...)` POCOs, `ProblemDetails`) is written by the MVC formatter in camelCase, and its schema is renamed to match ([CamelCasePropertyNames\(this OpenApiSchema\)](DiGi.WebAPI.WindowsService.Modify.md#DiGi.WebAPI.WindowsService.Modify.Modify.CamelCasePropertyNames(thisMicrosoft.OpenApi.OpenApiSchema) 'DiGi\.WebAPI\.WindowsService\.Modify\.Modify\.CamelCasePropertyNames\(this Microsoft\.OpenApi\.OpenApiSchema\)')).
 
 See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#3. Enum members of a DiGi payload travel as integers and are declared inline (#6); the shared enum components stay the member-name strings that query parameters and MVC payloads use.
 

@@ -121,11 +121,14 @@ namespace DiGi.WebAPI.WindowsService.Modify
                 else if (openApiSchema_Member is OpenApiSchemaReference && nullable)
                 {
                     // Siblings of $ref are ignored in OpenAPI 3.0, so nullability needs a wrapper around the reference.
+                    // The null half is an enum listing null, not a null type: the writer folds a null-typed member of
+                    // anyOf into nullable on the wrapper, and OpenAPI 3.0's nullable widens only an explicit type the
+                    // wrapper does not have, so that form rejects the null the DiGi serializer writes.
                     openApiSchema_Member = new OpenApiSchema
                     {
                         AnyOf = new List<IOpenApiSchema> {
                             openApiSchema_Member,
-                            new OpenApiSchema { Type = JsonSchemaType.Null }
+                            new OpenApiSchema { Enum = [null!] }
                         }
                     };
                 }

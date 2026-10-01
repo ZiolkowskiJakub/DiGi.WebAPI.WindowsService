@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System.Collections.Generic;
@@ -10,6 +9,11 @@ namespace DiGi.WebAPI.WindowsService.Modify
     /// </summary>
     public class ProblemDetailsResponseOperationFilter : IOperationFilter
     {
+        /// <summary>
+        /// Points the <c>application/json</c> content of every 4xx and 5xx response that has content at the <c>ProblemDetails</c> component.
+        /// </summary>
+        /// <param name="operation">The OpenAPI operation to be modified.</param>
+        /// <param name="context">The context carrying the document the schema reference resolves against.</param>
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             if (operation.Responses == null) return;
@@ -33,12 +37,9 @@ namespace DiGi.WebAPI.WindowsService.Modify
                         response.Content["application/json"] = new OpenApiMediaType();
                     }
 
-                    // Set the schema to ProblemDetails reference
+                    // Set the schema to a reference to the ProblemDetails component
                     var mediaType = response.Content["application/json"];
-                    mediaType.Schema = new OpenApiSchema
-                    {
-                        Reference = new OpenApiReference { Type = ReferenceType.Schema, Id = "ProblemDetails" }
-                    };
+                    mediaType.Schema = new OpenApiSchemaReference("ProblemDetails", context.Document);
                 }
             }
         }

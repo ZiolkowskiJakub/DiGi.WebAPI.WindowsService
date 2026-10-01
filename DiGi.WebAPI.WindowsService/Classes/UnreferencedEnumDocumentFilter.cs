@@ -5,7 +5,7 @@ using Swashbuckle.AspNetCore.SwaggerGen;
 namespace DiGi.WebAPI.WindowsService.Classes
 {
     /// <summary>
-    /// Removes the enum components a generated document no longer references (<see cref="Modify.RemoveUnreferencedEnumSchemas"/>): those whose only users were DiGi payload members, which declare their enum inline.
+    /// Removes the enum components a generated document no longer references (<see cref="Modify.Modify.RemoveUnreferencedEnumSchemas"/>): those whose only users were DiGi payload members, which declare their enum inline.
     /// </summary>
     public class UnreferencedEnumDocumentFilter : IDocumentFilter
     {

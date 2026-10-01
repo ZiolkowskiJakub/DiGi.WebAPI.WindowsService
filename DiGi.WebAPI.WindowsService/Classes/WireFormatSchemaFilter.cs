@@ -7,7 +7,7 @@ namespace DiGi.WebAPI.WindowsService.Classes
 {
     /// <summary>
     /// Makes every payload schema describe the format actually written on the wire, which depends on who writes the payload.
-    /// <para>A DiGi <c>ISerializableObject</c> is written by the DiGi serializer - exact member names (PascalCase by convention), a mandatory <c>_type</c> discriminator, every member present - and its schema is rebuilt from that serializer's member contract (<see cref="Modify.UpdateSerializableObjectProperties"/>). Anything else (<c>Ok(...)</c> POCOs, <c>ProblemDetails</c>) is written by the MVC formatter in camelCase, and its schema is renamed to match (<see cref="Modify.CamelCasePropertyNames"/>).</para>
+    /// <para>A DiGi <c>ISerializableObject</c> is written by the DiGi serializer - exact member names (PascalCase by convention), a mandatory <c>_type</c> discriminator, every member present - and its schema is rebuilt from that serializer's member contract (<see cref="Modify.Modify.UpdateSerializableObjectProperties"/>). Anything else (<c>Ok(...)</c> POCOs, <c>ProblemDetails</c>) is written by the MVC formatter in camelCase, and its schema is renamed to match (<see cref="Modify.Modify.CamelCasePropertyNames"/>).</para>
     /// <para>See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#3. Enum members of a DiGi payload travel as integers and are declared inline (#6); the shared enum components stay the member-name strings that query parameters and MVC payloads use.</para>
     /// </summary>
     public class WireFormatSchemaFilter : ISchemaFilter

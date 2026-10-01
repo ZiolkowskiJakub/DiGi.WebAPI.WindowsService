@@ -1,117 +1,136 @@
 using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Text.Json.Nodes;
 
 namespace DiGi.WebAPI.WindowsService.Classes.Filters
 {
     /// <summary>
     /// Adds example values to parameters, request bodies, and responses in the OpenAPI document.
-    /// Sets a simple example for any schema that doesn't already have one.
+    /// <para>Sets a simple example on any schema that does not already have one: the inline schema itself, or, when the
+    /// operation refers to a component, the component schema the reference points to - OpenAPI 3.0 ignores everything
+    /// written beside a <c>$ref</c>, and a reference has no writable example of its own.</para>
     /// </summary>
     public class AddExamplesOperationFilter : IOperationFilter
     {
+        /// <summary>
+        /// Sets a simple example on the schema of every parameter, request body, and response of the operation that has none.
+        /// </summary>
+        /// <param name="operation">The OpenAPI operation to be modified.</param>
+        /// <param name="context">The context carrying the schema repository an operation's references resolve against.</param>
         public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
-            if (operation == null) return;
-
-            // Add examples to parameters
-            foreach (var parameter in operation.Parameters ?? Array.Empty<IOpenApiParameter>())
+            if (operation is null)
             {
-                if (parameter.Schema != null && parameter.Schema.Example == null)
+                return;
+            }
+
+            foreach (IOpenApiParameter parameter in operation.Parameters ?? [])
+            {
+                ApplyExample(parameter.Schema, context);
+            }
+
+            if (operation.RequestBody?.Content is not null)
+            {
+                foreach (OpenApiMediaType mediaType in operation.RequestBody.Content.Values)
                 {
-                    SetSimpleExample(parameter.Schema);
+                    ApplyExample(mediaType.Schema, context);
                 }
             }
 
-            // Add examples to request body
-            if (operation.RequestBody != null)
+            if (operation.Responses is not null)
             {
-                foreach (var mediaType in operation.RequestBody.Content.Values)
+                foreach (IOpenApiResponse response in operation.Responses.Values)
                 {
-                    if (mediaType.Schema != null && mediaType.Schema.Example == null)
+                    if (response.Content is null)
                     {
-                        SetSimpleExample(mediaType.Schema);
+                        continue;
                     }
-                }
-            }
 
-            // Add examples to responses
-            if (operation.Responses != null)
-            {
-                foreach (var kvp in operation.Responses)
-                {
-                    var response = kvp.Value;
-                    if (response.Content != null)
+                    foreach (OpenApiMediaType mediaType in response.Content.Values)
                     {
-                        foreach (var mediaType in response.Content.Values)
-                        {
-                            if (mediaType.Schema != null && mediaType.Schema.Example == null)
-                            {
-                                SetSimpleExample(mediaType.Schema);
-                            }
-                        }
+                        ApplyExample(mediaType.Schema, context);
                     }
                 }
             }
         }
 
-        private static void SetSimpleExample(IOpenApiSchema schema)
+        // An inline schema takes its own example; a reference is followed to the component it points to, because the
+        // reference exposes a read-only example and OpenAPI 3.0 rejects siblings beside a $ref.
+        private static void ApplyExample(IOpenApiSchema? schema, OperationFilterContext? context)
         {
-            // Set a simple example based on schema type
-            if (schema.Type == JsonSchemaType.String)
+            OpenApiSchema? openApiSchema = schema as OpenApiSchema;
+
+            if (openApiSchema is null
+                && schema is OpenApiSchemaReference openApiSchemaReference
+                && !string.IsNullOrWhiteSpace(openApiSchemaReference.Reference.Id)
+                && context is not null
+                && context.SchemaRepository.Schemas.TryGetValue(openApiSchemaReference.Reference.Id, out IOpenApiSchema? componentSchema))
             {
-                if (!string.IsNullOrWhiteSpace(schema.Format))
+                openApiSchema = componentSchema as OpenApiSchema;
+            }
+
+            if (openApiSchema is not null && openApiSchema.Example is null)
+            {
+                SetSimpleExample(openApiSchema);
+            }
+        }
+
+        // The v2 example is a JsonNode. Nullability is folded into Type (X | Null), so the Null flag is masked out
+        // before the dispatch; an enum takes one of its own values, which the plain string fallback would violate.
+        private static void SetSimpleExample(OpenApiSchema openApiSchema)
+        {
+            if (openApiSchema.Enum is not null)
+            {
+                foreach (JsonNode? jsonNode in openApiSchema.Enum)
                 {
-                    switch (schema.Format.ToLowerInvariant())
+                    if (jsonNode is not null)
                     {
-                        case "date":
-                            schema.Example = new Microsoft.OpenApi.OpenApiString("2026-01-01");
-                            break;
-                        case "date-time":
-                            schema.Example = new Microsoft.OpenApi.OpenApiString("2026-01-01T12:00:00Z");
-                            break;
-                        case "uuid":
-                            schema.Example = new Microsoft.OpenApi.OpenApiString("3fa85f64-5717-4562-b3fc-2c963f66afa6");
-                            break;
-                        default:
-                            schema.Example = new Microsoft.OpenApi.OpenApiString("example");
-                            break;
+                        openApiSchema.Example = jsonNode.DeepClone();
+                        return;
                     }
                 }
-                else
-                {
-                    schema.Example = new Microsoft.OpenApi.OpenApiString("example");
-                }
             }
-            else if (schema.Type == JsonSchemaType.Integer || schema.Type == JsonSchemaType.Long)
+
+            JsonSchemaType type = (openApiSchema.Type ?? JsonSchemaType.Null) & ~JsonSchemaType.Null;
+
+            if (type == JsonSchemaType.String)
             {
-                schema.Example = new Microsoft.OpenApi.OpenApiInteger(0);
+                openApiSchema.Example = string.IsNullOrWhiteSpace(openApiSchema.Format)
+                    ? JsonValue.Create("example")
+                    : JsonValue.Create(openApiSchema.Format.ToLowerInvariant() switch
+                    {
+                        "date" => "2026-01-01",
+                        "date-time" => "2026-01-01T12:00:00Z",
+                        "uuid" => "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                        _ => "example"
+                    });
             }
-            else if (schema.Type == JsonSchemaType.Boolean)
+            else if (type == JsonSchemaType.Integer)
             {
-                schema.Example = new Microsoft.OpenApi.OpenApiBoolean(false);
+                openApiSchema.Example = JsonValue.Create(0);
             }
-            else if (schema.Type == JsonSchemaType.Number)
+            else if (type == JsonSchemaType.Boolean)
             {
-                schema.Example = new OpenApiFloat(0f);
+                openApiSchema.Example = JsonValue.Create(false);
             }
-            else if (schema.Type == JsonSchemaType.Object)
+            else if (type == JsonSchemaType.Number)
+            {
+                openApiSchema.Example = JsonValue.Create(0.0);
+            }
+            else if (type == JsonSchemaType.Object)
             {
                 // For objects, set an empty object as example
-                schema.Example = new Microsoft.OpenApi.OpenApiObject();
+                openApiSchema.Example = new JsonObject();
             }
-            else if (schema.Type == JsonSchemaType.Array)
+            else if (type == JsonSchemaType.Array)
             {
                 // For arrays, set an empty array as example
-                schema.Example = new Microsoft.OpenApi.OpenApiArray();
+                openApiSchema.Example = new JsonArray();
             }
             else
             {
                 // Fallback: string example
-                schema.Example = new Microsoft.OpenApi.OpenApiString("example");
+                openApiSchema.Example = JsonValue.Create("example");
             }
         }
     }
