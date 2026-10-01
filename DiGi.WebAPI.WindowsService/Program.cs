@@ -17,6 +17,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
+using DiGi.WebAPI.WindowsService.Modify;
 
 namespace DiGi.WebAPI.WindowsService
 {
@@ -255,6 +256,13 @@ namespace DiGi.WebAPI.WindowsService
             serviceCollection.AddSwaggerGen(options =>
             {
                 options.ConfigureSchemaGeneration();
+                options.AddSecurityDefinition("apiKey", new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.ApiKey,
+                    In = ParameterLocation.Header,
+                    Name = "key",
+                    Description = "API key for authorization"
+                });
 
                 options.SwaggerDoc(Constants.Name.SwaggerDocument_Full, new OpenApiInfo
                 {
@@ -288,6 +296,8 @@ namespace DiGi.WebAPI.WindowsService
                         Arguments = []
                     });
                 }
+                options.OperationFilter<SecurityRequirementOperationFilter>();
+                options.OperationFilter<ProblemDetailsResponseOperationFilter>();
 
                 options.IncludeAssemblyXmlComments(AssemblyLoadContext.Default.Assemblies);
             });
