@@ -134,7 +134,9 @@ A task that represents the asynchronous operation\. The task result is [true](ht
 
 Rewrites the schema of a DiGi `ISerializableObject` payload type so that it describes what the DiGi serializer writes, not what the MVC JSON options would\.
 
-For a type whose JSON is its member contract ([IsClosedWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.IsClosedWireFormat\(this System\.Type\)')): one property per written member ([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')), under its exact JSON name, all of them required because the serializer writes every member - `null` explicitly - and `additionalProperties: false`. Member schemas are generated against the public property the member is named after where there is one, so field-backed types get that property's XML description; `readOnly` is cleared because the serializer reads members back regardless of setters, and a nullable member typed by a schema component is wrapped so that `null` validates against it.
+Always a JSON object - also for a DiGi type that is an `IEnumerable` (a `Weather` is an `IEnumerable<WeatherRecord>`), which Swashbuckle on its own documents as an array.
+
+For a type whose JSON is its member contract ([HasMemberWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.HasMemberWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.HasMemberWireFormat\(this System\.Type\)')): one property per written member ([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')), under its exact JSON name, all of them required because the serializer writes every member - `null` explicitly. Member schemas are generated against the public property the member is named after where there is one, so field-backed types get that property's XML description; `readOnly` is cleared because the serializer reads members back regardless of setters, and a nullable member typed by a schema component is wrapped so that `null` validates against it. The schema is closed with `additionalProperties: false` unless a loaded type derives from it ([DerivedTypes\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.DerivedTypes(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.DerivedTypes\(this System\.Type\)')): a member declared as the type may then hold the subclass, which is written with its extra members.
 
 For any other DiGi type (an interface, an abstract type, a type writing its own JSON): an open schema requiring only `_type`, the discriminator naming the concrete type whose members follow.
 
@@ -149,7 +151,7 @@ public static void UpdateSerializableObjectProperties(this Microsoft.OpenApi.Ope
 
 `openApiSchema` [Microsoft\.OpenApi\.OpenApiSchema](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapischema 'Microsoft\.OpenApi\.OpenApiSchema')
 
-The component schema generated for the type\.
+The schema generated for the type: its component, or the inline schema of a type Swashbuckle gives no component\.
 
 <a name='DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).schemaFilterContext'></a>
 
@@ -236,6 +238,29 @@ public static class Query
 
 Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → Query
 ### Methods
+
+<a name='DiGi.WebAPI.WindowsService.Query.DerivedTypes(thisSystem.Type)'></a>
+
+## Query\.DerivedTypes\(this Type\) Method
+
+Gets the types loaded into the application domain that derive from \(or implement\) the given type, the type itself excluded\.
+
+The host loads every extension assembly at start-up, so after start-up this is every type a payload declared as [type](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.DerivedTypes(thisSystem.Type).type 'DiGi\.WebAPI\.WindowsService\.Query\.DerivedTypes\(this System\.Type\)\.type') can actually hold - `EPWFile.WeatherRecords` is declared as a list of `WeatherRecord` and holds `DataRecord`s from `DiGi.EPW`. Only the type's own assembly and the assemblies referencing it are scanned; a type that fails to load is skipped.
+
+```csharp
+public static System.Collections.Generic.List<System.Type> DerivedTypes(this System.Type? type);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.DerivedTypes(thisSystem.Type).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The base type or interface\.
+
+#### Returns
+[System\.Collections\.Generic\.List&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')  
+The derived types; empty for `null`, a sealed type or a value type\.
 
 <a name='DiGi.WebAPI.WindowsService.Query.DocumentName(thisMicrosoft.AspNetCore.Mvc.ApiExplorer.ApiDescription)'></a>
 
@@ -333,20 +358,22 @@ The file path of the library to check for exclusion\.
 [System\.Boolean](https://learn.microsoft.com/en-us/dotnet/api/system.boolean 'System\.Boolean')  
 True if the library is a system or Microsoft assembly; otherwise, false\.
 
-<a name='DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type)'></a>
+<a name='DiGi.WebAPI.WindowsService.Query.HasMemberWireFormat(thisSystem.Type)'></a>
 
-## Query\.IsClosedWireFormat\(this Type\) Method
+## Query\.HasMemberWireFormat\(this Type\) Method
 
-Checks whether the JSON the DiGi serializer writes for a type is fully determined by that type's own serializable members \([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')\), so that a schema can list them and close itself with `additionalProperties: false`\.
+Checks whether the JSON the DiGi serializer writes for a type is built from that type's own serializable members \([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')\), so that a schema can list them\.
 
 Not so for an interface or an abstract type, whose payloads carry the members of whichever concrete type was serialized (named by `_type`), nor for a type that overrides [DiGi\.Core\.Classes\.SerializableObject\.ToJsonObject](https://learn.microsoft.com/en-us/dotnet/api/digi.core.classes.serializableobject.tojsonobject 'DiGi\.Core\.Classes\.SerializableObject\.ToJsonObject') (`SerializableObjectWrapper`, `IndexedObjects<T>`, `Matrix`, ...) or implements `ISerializableObject` without deriving from [DiGi\.Core\.Classes\.SerializableObject](https://learn.microsoft.com/en-us/dotnet/api/digi.core.classes.serializableobject 'DiGi\.Core\.Classes\.SerializableObject'), whose JSON is written by its own code.
 
+Whether the listed members are also all the payload can carry is a separate question: a member declared as this type may hold a subclass ([DerivedTypes\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.DerivedTypes(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.DerivedTypes\(this System\.Type\)')).
+
 ```csharp
-public static bool IsClosedWireFormat(this System.Type? type);
+public static bool HasMemberWireFormat(this System.Type? type);
 ```
 #### Parameters
 
-<a name='DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type).type'></a>
+<a name='DiGi.WebAPI.WindowsService.Query.HasMemberWireFormat(thisSystem.Type).type'></a>
 
 `type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
 
@@ -364,7 +391,7 @@ Gets the members the DiGi serializer writes for an instance of the given type, e
 
 Mirrors `DiGi.Core.Create.SerializationMethodCollection` and `SerializationMethodCollection.Create`: members come from `Core.Query.SerializableMemberInfos` (base type first), are named by `Core.Query.SerializableName`, members carrying a `[JsonPropertyOrder]` go first in that order, a later member replaces an earlier one of the same name in its position, and a property without a parameterless getter is dropped because the serializer cannot read it. Keep the two in step - a schema built from this list describes the wire only while they agree.
 
-Valid only for types whose JSON is built from these members; see [IsClosedWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.IsClosedWireFormat\(this System\.Type\)').
+Valid only for types whose JSON is built from these members; see [HasMemberWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.HasMemberWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.HasMemberWireFormat\(this System\.Type\)').
 
 ```csharp
 public static System.Collections.Generic.List<(string Name,System.Reflection.MemberInfo MemberInfo)> WireMembers(this System.Type? type);

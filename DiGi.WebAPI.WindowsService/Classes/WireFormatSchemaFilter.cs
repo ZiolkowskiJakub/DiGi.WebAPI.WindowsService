@@ -23,14 +23,11 @@ namespace DiGi.WebAPI.WindowsService.Classes
                 return;
             }
 
+            // A member or parameter typed by a DiGi component arrives here as a $ref and was returned above; a concrete schema
+            // is either the component itself or an inline one (Swashbuckle inlines an IEnumerable DiGi type), and both are rebuilt.
             if (typeof(ISerializableObject).IsAssignableFrom(context.Type))
             {
-                // Only the component definition is rebuilt; a member typed by a DiGi type references it.
-                if (context.MemberInfo is null && context.ParameterInfo is null)
-                {
-                    openApiSchema.UpdateSerializableObjectProperties(context);
-                }
-
+                openApiSchema.UpdateSerializableObjectProperties(context);
                 return;
             }
 

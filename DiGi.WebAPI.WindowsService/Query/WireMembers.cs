@@ -9,7 +9,7 @@ namespace DiGi.WebAPI.WindowsService
         /// <summary>
         /// Gets the members the DiGi serializer writes for an instance of the given type, each with the JSON property name it is written under, in the order it writes them.
         /// <para>Mirrors <c>DiGi.Core.Create.SerializationMethodCollection</c> and <c>SerializationMethodCollection.Create</c>: members come from <c>Core.Query.SerializableMemberInfos</c> (base type first), are named by <c>Core.Query.SerializableName</c>, members carrying a <c>[JsonPropertyOrder]</c> go first in that order, a later member replaces an earlier one of the same name in its position, and a property without a parameterless getter is dropped because the serializer cannot read it. Keep the two in step - a schema built from this list describes the wire only while they agree.</para>
-        /// <para>Valid only for types whose JSON is built from these members; see <see cref="IsClosedWireFormat"/>.</para>
+        /// <para>Valid only for types whose JSON is built from these members; see <see cref="HasMemberWireFormat"/>.</para>
         /// </summary>
         /// <param name="type">The serializable type.</param>
         /// <returns>The written members with their JSON names; empty when the type is <c>null</c> or has no serializable members.</returns>
