@@ -20,7 +20,7 @@ namespace DiGi.WebAPI.WindowsService
             }
 
             swaggerGenOptions.DescribeAllParametersInCamelCase();
-            swaggerGenOptions.SchemaFilter<CamelCaseSchemaFilter>();
+            swaggerGenOptions.SchemaFilter<WireFormatSchemaFilter>();
         }
     }
 }

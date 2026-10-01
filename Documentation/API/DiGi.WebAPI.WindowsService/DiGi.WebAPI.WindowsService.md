@@ -14,6 +14,25 @@ public static class Modify
 Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → Modify
 ### Methods
 
+<a name='DiGi.WebAPI.WindowsService.Modify.CamelCasePropertyNames(thisMicrosoft.OpenApi.OpenApiSchema)'></a>
+
+## Modify\.CamelCasePropertyNames\(this OpenApiSchema\) Method
+
+Renames the properties of a schema, and its `required` entries, to camelCase \- the names the host's MVC JSON options write \([ConfigureJsonSerializerOptions\(this JsonSerializerOptions\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.ConfigureJsonSerializerOptions(thisSystem.Text.Json.JsonSerializerOptions) 'DiGi\.WebAPI\.WindowsService\.Modify\.ConfigureJsonSerializerOptions\(this System\.Text\.Json\.JsonSerializerOptions\)')\)\.
+
+Needed for payloads written by the MVC formatter only: Swashbuckle documents a `[JsonPropertyName]` as spelled, while the host's `ForceCamelCaseModifier` writes every MVC member camelCase regardless. Never apply it to a DiGi `ISerializableObject` payload, which the DiGi serializer writes under its exact names.
+
+```csharp
+public static void CamelCasePropertyNames(this Microsoft.OpenApi.OpenApiSchema? openApiSchema);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.CamelCasePropertyNames(thisMicrosoft.OpenApi.OpenApiSchema).openApiSchema'></a>
+
+`openApiSchema` [Microsoft\.OpenApi\.OpenApiSchema](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapischema 'Microsoft\.OpenApi\.OpenApiSchema')
+
+The schema to rename the properties of\.
+
 <a name='DiGi.WebAPI.WindowsService.Modify.ConfigureJsonSerializerOptions(thisSystem.Text.Json.JsonSerializerOptions)'></a>
 
 ## Modify\.ConfigureJsonSerializerOptions\(this JsonSerializerOptions\) Method
@@ -108,6 +127,35 @@ The [Microsoft\.Extensions\.DependencyInjection\.IServiceCollection](https://lea
 [System\.Threading\.Tasks\.Task&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task-1 'System\.Threading\.Tasks\.Task\`1')[System\.Boolean](https://learn.microsoft.com/en-us/dotnet/api/system.boolean 'System\.Boolean')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.threading.tasks.task-1 'System\.Threading\.Tasks\.Task\`1')  
 A task that represents the asynchronous operation\. The task result is [true](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool 'https://docs\.microsoft\.com/en\-us/dotnet/csharp/language\-reference/builtin\-types/bool') if 
             controllers were registered or initialization methods were successfully executed; otherwise, [false](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/builtin-types/bool 'https://docs\.microsoft\.com/en\-us/dotnet/csharp/language\-reference/builtin\-types/bool')\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext)'></a>
+
+## Modify\.UpdateSerializableObjectProperties\(this OpenApiSchema, SchemaFilterContext\) Method
+
+Rewrites the schema of a DiGi `ISerializableObject` payload type so that it describes what the DiGi serializer writes, not what the MVC JSON options would\.
+
+For a type whose JSON is its member contract ([IsClosedWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.IsClosedWireFormat\(this System\.Type\)')): one property per written member ([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')), under its exact JSON name, all of them required because the serializer writes every member - `null` explicitly - and `additionalProperties: false`. Member schemas are generated against the public property the member is named after where there is one, so field-backed types get that property's XML description; `readOnly` is cleared because the serializer reads members back regardless of setters, and a nullable member typed by a schema component is wrapped so that `null` validates against it.
+
+For any other DiGi type (an interface, an abstract type, a type writing its own JSON): an open schema requiring only `_type`, the discriminator naming the concrete type whose members follow.
+
+Enum members keep the schema Swashbuckle generates for them; their wire form is ZiolkowskiJakub/DiGi.WebAPI.WindowsService#6.
+
+```csharp
+public static void UpdateSerializableObjectProperties(this Microsoft.OpenApi.OpenApiSchema? openApiSchema, Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext? schemaFilterContext);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).openApiSchema'></a>
+
+`openApiSchema` [Microsoft\.OpenApi\.OpenApiSchema](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.openapischema 'Microsoft\.OpenApi\.OpenApiSchema')
+
+The component schema generated for the type\.
+
+<a name='DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).schemaFilterContext'></a>
+
+`schemaFilterContext` [Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext](https://learn.microsoft.com/en-us/dotnet/api/swashbuckle.aspnetcore.swaggergen.schemafiltercontext 'Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext')
+
+The schema filter context naming the type, with the generator and repository used for member schemas\.
 
 <a name='DiGi.WebAPI.WindowsService.Program'></a>
 
@@ -284,3 +332,51 @@ The file path of the library to check for exclusion\.
 #### Returns
 [System\.Boolean](https://learn.microsoft.com/en-us/dotnet/api/system.boolean 'System\.Boolean')  
 True if the library is a system or Microsoft assembly; otherwise, false\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type)'></a>
+
+## Query\.IsClosedWireFormat\(this Type\) Method
+
+Checks whether the JSON the DiGi serializer writes for a type is fully determined by that type's own serializable members \([WireMembers\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.WireMembers\(this System\.Type\)')\), so that a schema can list them and close itself with `additionalProperties: false`\.
+
+Not so for an interface or an abstract type, whose payloads carry the members of whichever concrete type was serialized (named by `_type`), nor for a type that overrides [DiGi\.Core\.Classes\.SerializableObject\.ToJsonObject](https://learn.microsoft.com/en-us/dotnet/api/digi.core.classes.serializableobject.tojsonobject 'DiGi\.Core\.Classes\.SerializableObject\.ToJsonObject') (`SerializableObjectWrapper`, `IndexedObjects<T>`, `Matrix`, ...) or implements `ISerializableObject` without deriving from [DiGi\.Core\.Classes\.SerializableObject](https://learn.microsoft.com/en-us/dotnet/api/digi.core.classes.serializableobject 'DiGi\.Core\.Classes\.SerializableObject'), whose JSON is written by its own code.
+
+```csharp
+public static bool IsClosedWireFormat(this System.Type? type);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The serializable type\.
+
+#### Returns
+[System\.Boolean](https://learn.microsoft.com/en-us/dotnet/api/system.boolean 'System\.Boolean')  
+`true` when the type is a concrete [DiGi\.Core\.Classes\.SerializableObject](https://learn.microsoft.com/en-us/dotnet/api/digi.core.classes.serializableobject 'DiGi\.Core\.Classes\.SerializableObject') serialized through the default member contract; otherwise `false`\.
+
+<a name='DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type)'></a>
+
+## Query\.WireMembers\(this Type\) Method
+
+Gets the members the DiGi serializer writes for an instance of the given type, each with the JSON property name it is written under, in the order it writes them\.
+
+Mirrors `DiGi.Core.Create.SerializationMethodCollection` and `SerializationMethodCollection.Create`: members come from `Core.Query.SerializableMemberInfos` (base type first), are named by `Core.Query.SerializableName`, members carrying a `[JsonPropertyOrder]` go first in that order, a later member replaces an earlier one of the same name in its position, and a property without a parameterless getter is dropped because the serializer cannot read it. Keep the two in step - a schema built from this list describes the wire only while they agree.
+
+Valid only for types whose JSON is built from these members; see [IsClosedWireFormat\(this Type\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Query.IsClosedWireFormat(thisSystem.Type) 'DiGi\.WebAPI\.WindowsService\.Query\.IsClosedWireFormat\(this System\.Type\)').
+
+```csharp
+public static System.Collections.Generic.List<(string Name,System.Reflection.MemberInfo MemberInfo)> WireMembers(this System.Type? type);
+```
+#### Parameters
+
+<a name='DiGi.WebAPI.WindowsService.Query.WireMembers(thisSystem.Type).type'></a>
+
+`type` [System\.Type](https://learn.microsoft.com/en-us/dotnet/api/system.type 'System\.Type')
+
+The serializable type\.
+
+#### Returns
+[System\.Collections\.Generic\.List&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')[&lt;](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[System\.String](https://learn.microsoft.com/en-us/dotnet/api/system.string 'System\.String')[,](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[System\.Reflection\.MemberInfo](https://learn.microsoft.com/en-us/dotnet/api/system.reflection.memberinfo 'System\.Reflection\.MemberInfo')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.valuetuple 'System\.ValueTuple')[&gt;](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.list-1 'System\.Collections\.Generic\.List\`1')  
+The written members with their JSON names; empty when the type is `null` or has no serializable members\.

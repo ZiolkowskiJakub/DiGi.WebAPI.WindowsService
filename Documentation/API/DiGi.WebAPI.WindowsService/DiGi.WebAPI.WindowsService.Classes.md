@@ -3,39 +3,43 @@
 ## DiGi\.WebAPI\.WindowsService\.Classes Namespace
 ### Classes
 
-<a name='DiGi.WebAPI.WindowsService.Classes.CamelCaseSchemaFilter'></a>
+<a name='DiGi.WebAPI.WindowsService.Classes.WireFormatSchemaFilter'></a>
 
-## CamelCaseSchemaFilter Class
+## WireFormatSchemaFilter Class
 
-Provides a schema filter that converts property names in the OpenAPI schema to camelCase\.
+Makes every payload schema describe the format actually written on the wire, which depends on who writes the payload\.
+
+A DiGi `ISerializableObject` is written by the DiGi serializer - exact member names (PascalCase by convention), a mandatory `_type` discriminator, every member present - and its schema is rebuilt from that serializer's member contract ([UpdateSerializableObjectProperties\(this OpenApiSchema, SchemaFilterContext\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.UpdateSerializableObjectProperties(thisMicrosoft.OpenApi.OpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext) 'DiGi\.WebAPI\.WindowsService\.Modify\.UpdateSerializableObjectProperties\(this Microsoft\.OpenApi\.OpenApiSchema, Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext\)')). Anything else (`Ok(...)` POCOs, `ProblemDetails`) is written by the MVC formatter in camelCase, and its schema is renamed to match ([CamelCasePropertyNames\(this OpenApiSchema\)](DiGi.WebAPI.WindowsService.md#DiGi.WebAPI.WindowsService.Modify.CamelCasePropertyNames(thisMicrosoft.OpenApi.OpenApiSchema) 'DiGi\.WebAPI\.WindowsService\.Modify\.CamelCasePropertyNames\(this Microsoft\.OpenApi\.OpenApiSchema\)')).
+
+See ZiolkowskiJakub/DiGi.WebAPI.WindowsService#3; enum declaration is #6.
 
 ```csharp
-public class CamelCaseSchemaFilter : Swashbuckle.AspNetCore.SwaggerGen.ISchemaFilter
+public class WireFormatSchemaFilter : Swashbuckle.AspNetCore.SwaggerGen.ISchemaFilter
 ```
 
-Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → CamelCaseSchemaFilter
+Inheritance [System\.Object](https://learn.microsoft.com/en-us/dotnet/api/system.object 'System\.Object') → WireFormatSchemaFilter
 
 Implements [Swashbuckle\.AspNetCore\.SwaggerGen\.ISchemaFilter](https://learn.microsoft.com/en-us/dotnet/api/swashbuckle.aspnetcore.swaggergen.ischemafilter 'Swashbuckle\.AspNetCore\.SwaggerGen\.ISchemaFilter')
 ### Methods
 
-<a name='DiGi.WebAPI.WindowsService.Classes.CamelCaseSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext)'></a>
+<a name='DiGi.WebAPI.WindowsService.Classes.WireFormatSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext)'></a>
 
-## CamelCaseSchemaFilter\.Apply\(IOpenApiSchema, SchemaFilterContext\) Method
+## WireFormatSchemaFilter\.Apply\(IOpenApiSchema, SchemaFilterContext\) Method
 
-Applies the camelCase naming policy to the properties of the provided OpenAPI schema\.
+Rewrites the schema for the wire format of its type: the DiGi member contract for an `ISerializableObject` component, camelCase names for anything else\.
 
 ```csharp
 public void Apply(Microsoft.OpenApi.IOpenApiSchema schema, Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext context);
 ```
 #### Parameters
 
-<a name='DiGi.WebAPI.WindowsService.Classes.CamelCaseSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).schema'></a>
+<a name='DiGi.WebAPI.WindowsService.Classes.WireFormatSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).schema'></a>
 
 `schema` [Microsoft\.OpenApi\.IOpenApiSchema](https://learn.microsoft.com/en-us/dotnet/api/microsoft.openapi.iopenapischema 'Microsoft\.OpenApi\.IOpenApiSchema')
 
 The OpenAPI schema to be modified\.
 
-<a name='DiGi.WebAPI.WindowsService.Classes.CamelCaseSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).context'></a>
+<a name='DiGi.WebAPI.WindowsService.Classes.WireFormatSchemaFilter.Apply(Microsoft.OpenApi.IOpenApiSchema,Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext).context'></a>
 
 `context` [Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext](https://learn.microsoft.com/en-us/dotnet/api/swashbuckle.aspnetcore.swaggergen.schemafiltercontext 'Swashbuckle\.AspNetCore\.SwaggerGen\.SchemaFilterContext')
 
